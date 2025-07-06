@@ -55,7 +55,13 @@ function handleClientMessage(serverInstance, ws, data) {
             serverInstance.minecraft.updateSettings(data.settings);
             break;
         case 'ping':
-            serverInstance.sendToClient(ws, { type: 'pong' });
+            // Reply with full status so dashboard stats (players, uptime, ram, tps) update
+            serverInstance.sendToClient(ws, {
+                type: 'status',
+                online: serverInstance.minecraft.serverStatus === 'online',
+                stats: serverInstance.minecraft.stats,
+                players: serverInstance.minecraft.players
+            });
             break;
         default:
             console.log('Unknown message type:', data.type);

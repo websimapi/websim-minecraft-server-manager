@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const fs         = require('fs');
 const path       = require('path');
+const pidusage   = require('pidusage');
 const { disablePaperPluginRemapper } = require('../config.js');
 
 module.exports.start = async function() {
@@ -54,6 +55,19 @@ module.exports.start = async function() {
     if (this.config.enableGeyser) {
         setTimeout(() => this.configureGeyser(), 5000);
     }
+
+    // Monitor memory usage periodically (updates this.stats.ram)
+    if (this.statsUpdater) clearInterval(this.statsUpdater);
+    this.statsUpdater = setInterval(async () => {
+        if (this.minecraftProcess && this.minecraftProcess.pid) {
+            try {
+                const usage = await pidusage(this.minecraftProcess.pid);
+                this.stats.ram = `${(usage.memory / 1024 / 1024).toFixed(2)} MB`;
+            } catch (err) {
+                console.error('Failed to get process usage:', err);
+            }
+        }
+    }, 5000);
 };
 
 module.exports.setupProcessEventListeners = function() {
@@ -75,6 +89,11 @@ module.exports.setupProcessEventListeners = function() {
     });
 
     this.minecraftProcess.on('exit', (code) => {
+        // Stop monitoring memory usage
+        if (this.statsUpdater) {
+            clearInterval(this.statsUpdater);
+            this.statsUpdater = null;
+        }
         console.log(`Server process exited with code ${code}`);
         this.minecraftProcess = null;
         this.serverStatus = 'offline';

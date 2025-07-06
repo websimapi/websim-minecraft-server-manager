@@ -17,6 +17,13 @@ module.exports.parseServerOutput = function(output) {
         if (line.includes('Done') && line.includes('For help, type "help"')) {
             this.broadcast({ type: 'notification', message: 'Server fully loaded and ready', level: 'success' });
         }
+        // Parse TPS metrics if present in console output
+        if (line.includes('TPS from last')) {
+            const match = line.match(/TPS from last 1m, 5m, 15m: ([\d\.]+)/);
+            if (match) {
+                this.stats.tps = match[1];
+            }
+        }
     });
     this.stats.players = this.players.length;
     if (this.startTime) {
