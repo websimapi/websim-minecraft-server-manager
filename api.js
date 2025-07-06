@@ -108,7 +108,7 @@ export function saveSettings() {
         serverType: document.getElementById('serverTypeSelect').value,
         maxPlayers: parseInt(document.getElementById('maxPlayersInput').value, 10),
         port: parseInt(document.getElementById('portInput').value, 10),
-        maxRam: `${document.getElementById('ramInput').value}M`, // Send with unit
+        ram: parseInt(document.getElementById('ramInput').value, 10),
         autoStart: document.getElementById('autoStartCheck').checked,
         enableGeyser: document.getElementById('enableGeyserCheck').checked,
         enableFloodgate: document.getElementById('enableFloodgateCheck').checked

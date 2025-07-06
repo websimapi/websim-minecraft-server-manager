@@ -9,7 +9,7 @@ let serverConfig = {
     javaPath: 'java',
     serverJar: 'server.jar',
     bedrockServerExecutable: 'bedrock_server',
-    maxRam: '2048M', // Using M for Megabytes, G for Gigabytes
+    maxRam: '2G',
     serverType: 'java', // 'java' or 'bedrock'
     autoStart: false,
     /* @tweakable Enable Geyser to allow Bedrock clients to connect */
