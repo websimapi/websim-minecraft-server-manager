@@ -3,7 +3,7 @@ import * as state from './state.js';
 import * as ui from './ui.js';
 
 let socket = null;
-let messageHandler = () => {};
+let messageHandler = null;
 
 export function sendWebSocketMessage(message) {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -27,7 +27,11 @@ function attemptReconnect() {
 }
 
 export function connectWebSocket(handler) {
-    messageHandler = handler;
+    // Only update the handler if a valid function is provided
+    if (typeof handler === 'function') {
+        messageHandler = handler;
+    }
+    
     try {
         if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
             console.log("WebSocket connection already open or in progress.");
@@ -48,7 +52,11 @@ export function connectWebSocket(handler) {
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                messageHandler(data);
+                if (typeof messageHandler === 'function') {
+                    messageHandler(data);
+                } else {
+                    console.error('WebSocket message handler is not a function.');
+                }
             } catch (e) {
                 console.error("Failed to parse WebSocket message:", e);
             }
