@@ -130,16 +130,26 @@ Thank you for downloading the server bridge! This Node.js application is the bac
 ## Instructions:
 1.  **Prerequisites:** You need Node.js installed. Download from [https://nodejs.org/](https://nodejs.org/).
 2.  **Unzip:** Extract this .zip file.
-3.  **Install Dependencies:** Open a terminal in the folder and run: \`npm install\`
-4.  **Add Server Jar:** Create a 'minecraft' folder and place your server .jar file inside. You may need to run it once to accept the EULA.
-5.  **Run Bridge:** Start with: \`npm start\`
+3.  **Install Dependencies:** Open a terminal or command prompt in the extracted folder and run: \`npm install\`
+4.  **Add Server Jar:** Create a 'minecraft' folder and place your server .jar file inside. If you don't have one, the bridge will attempt to download the latest version for you on first start. You may need to run it once manually to accept the EULA if issues arise.
+5.  **Run Bridge:** Start the server with: \`npm start\`
 The manager backend will run on port 3001. Use the web UI to connect.
     `.trim().replace(/    /g, '');
 
     zip.file('README.md', readmeContent);
-    zip.folder('minecraft');
+    zip.folder('minecraft'); // Create empty minecraft directory for user
 
-    const filesToFetch = ['server.js', 'package.json'];
+    /* @tweakable The list of server-side files to include in the downloadable bridge .zip file. */
+    const filesToFetch = [
+        'server.js',
+        'package.json',
+        'server/config.js',
+        'server/http.js',
+        'server/minecraft-adapter.js',
+        'server/minecraft-server.js',
+        'server/websocket.js'
+    ];
+
     const fetchPromises = filesToFetch.map(file =>
         fetch(file)
         .then(res => {
@@ -160,6 +170,7 @@ The manager backend will run on port 3001. Use the web UI to connect.
             document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
             ui.hideLoading();
+            ui.showToast('Download complete!', 'success');
         })
         .catch(error => {
             console.error('Failed to create bridge zip:', error);
