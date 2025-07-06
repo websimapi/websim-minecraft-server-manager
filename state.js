@@ -1,6 +1,7 @@
 let state = {
     isConnected: false,
     serverStatus: 'offline',
+    serverStartTime: null,
     autoScroll: true,
     players: [],
     reconnectAttempts: 0,
@@ -22,6 +23,10 @@ export function setServerStatus(status) {
     state.serverStatus = status;
 }
 
+export function setServerStartTime(time) {
+    state.serverStartTime = time;
+}
+
 export function setPlayers(players) {
     state.players = players;
 }
@@ -38,4 +43,3 @@ export function resetReconnectAttempts() {
 export function incrementReconnectAttempts() {
     state.reconnectAttempts++;
 }
-

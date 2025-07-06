@@ -1,6 +1,7 @@
 import * as state from './state.js';
 
 let apiHandler = {};
+let uptimeIntervalId = null;
 
 function switchSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
@@ -83,7 +84,7 @@ export function updateBridgeStatus(connected) {
     }
 }
 
-export function updateServerStatus(online, stats = {}) {
+export function updateServerStatus(online, stats = {}, startTime = null) {
     const statusIndicator = document.getElementById('serverStatusIndicator');
     const statusText = document.getElementById('serverStatusText');
     const startStopBtn = document.getElementById('startStopBtn');
@@ -100,30 +101,34 @@ export function updateServerStatus(online, stats = {}) {
         startStopBtn.className = 'btn btn-primary';
     }
 
-    // Players count
     document.getElementById('playerCount').textContent = stats.players ?? '0';
-    // Uptime calculation using stored start timestamp
-    let uptimeDisplay = '00:00:00';
-    if (online) {
-        const stored = localStorage.getItem('serverStartTime');
-        if (stored) {
-            const diffMs = Date.now() - parseInt(stored, 10);
-            const totalSeconds = Math.floor(diffMs / 1000);
-            const hours   = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
-            const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
-            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
-            uptimeDisplay = `${hours}:${minutes}:${seconds}`;
-        } else if (stats.uptime) {
-            uptimeDisplay = stats.uptime;
-        }
-    } else {
-        // Reset stored uptime when server is offline
-        localStorage.removeItem('serverStartTime');
-    }
-    document.getElementById('uptime').textContent = uptimeDisplay;
-    // RAM usage and TPS
     document.getElementById('ramUsage').textContent = stats.ram ?? '0 MB';
     document.getElementById('tps').textContent = stats.tps ?? '20.0';
+
+    const uptimeElement = document.getElementById('uptime');
+    // clear existing timer
+    if (uptimeIntervalId) {
+        clearInterval(uptimeIntervalId);
+        uptimeIntervalId = null;
+    }
+
+    if (online && startTime) {
+        const updateUptime = () => {
+            const elapsedMs = Date.now() - startTime;
+            const totalSeconds = Math.floor(elapsedMs / 1000);
+            const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            const milliseconds = (elapsedMs % 1000).toString().padStart(3, '0');
+            uptimeElement.textContent = `${hours}:${minutes}:${seconds}.${milliseconds}`;
+        };
+        // initial render and periodic update
+        updateUptime();
+        uptimeIntervalId = setInterval(updateUptime, 100);
+    } else {
+        // offline or no startTime
+        uptimeElement.textContent = '00:00:00.000';
+    }
 }
 
 export function updatePlayersList(players) {

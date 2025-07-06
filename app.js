@@ -8,18 +8,11 @@ function handleWebSocketMessage(data) {
     switch (data.type) {
         case 'console':
             ui.appendConsoleOutput(data.message);
-            if (data.message.includes('Done') && data.message.includes('For help, type "help"')) {
-                const match = data.message.match(/Done \(([\d.]+)s\)/);
-                if (match) {
-                    const seconds = parseFloat(match[1]);
-                    const startTime = Date.now() - seconds * 1000;
-                    localStorage.setItem('serverStartTime', startTime.toString());
-                }
-            }
             break;
         case 'status':
             state.setServerStatus(data.online ? 'online' : 'offline');
-            ui.updateServerStatus(data.online, data.stats);
+            state.setServerStartTime(data.startTime);
+            ui.updateServerStatus(data.online, data.stats, data.startTime);
             ui.hideLoading();
             break;
         case 'players':

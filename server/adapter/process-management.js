@@ -49,7 +49,7 @@ module.exports.start = async function() {
 
     this.serverStatus = 'online';
     this.startTime   = Date.now();
-    this.broadcast({ type: 'status', online: true, stats: this.stats });
+    this.broadcast({ type: 'status', online: true, stats: this.stats, startTime: this.startTime });
     this.broadcast({ type: 'notification', message: 'Server started successfully', level: 'success' });
 
     if (this.config.enableGeyser) {
@@ -100,7 +100,7 @@ module.exports.setupProcessEventListeners = function() {
         this.startTime   = null;
         this.players     = [];
         this.updatePlayersList();
-        this.broadcast({ type: 'status', online: false, stats: this.stats });
+        this.broadcast({ type: 'status', online: false, stats: this.stats, startTime: this.startTime });
         this.broadcast({ type: 'notification', message: 'Server stopped', level: 'info' });
     });
 };

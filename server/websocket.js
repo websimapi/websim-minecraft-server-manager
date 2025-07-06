@@ -12,7 +12,8 @@ function setupWebSocket(serverInstance) {
             type: 'status',
             online: serverInstance.minecraft.serverStatus === 'online',
             stats: serverInstance.minecraft.stats,
-            players: serverInstance.minecraft.players
+            players: serverInstance.minecraft.players,
+            startTime: serverInstance.minecraft.startTime
         });
 
         ws.on('message', (message) => {
@@ -55,12 +56,12 @@ function handleClientMessage(serverInstance, ws, data) {
             serverInstance.minecraft.updateSettings(data.settings);
             break;
         case 'ping':
-            // Reply with full status so dashboard stats (players, uptime, ram, tps) update
             serverInstance.sendToClient(ws, {
                 type: 'status',
                 online: serverInstance.minecraft.serverStatus === 'online',
                 stats: serverInstance.minecraft.stats,
-                players: serverInstance.minecraft.players
+                players: serverInstance.minecraft.players,
+                startTime: serverInstance.minecraft.startTime
             });
             break;
         default:
