@@ -435,7 +435,38 @@ class MinecraftServerManager {
         this.showToast('Preparing download...', 'info');
         /* @tweakable URL to download the server bridge from */
         const downloadUrl = '/api/download-bridge';
-        window.location.href = downloadUrl;
+        
+        fetch(downloadUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.statusText}`);
+                }
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'mc-manager-bridge.zip';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+                    if (filenameMatch && filenameMatch.length > 1) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                return Promise.all([response.blob(), filename]);
+            })
+            .then(([blob, filename]) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                this.showToast('Download started!', 'success');
+            })
+            .catch(error => {
+                console.error('Download failed:', error);
+                this.showToast('Download failed. See console for details.', 'error');
+            });
     }
 
     showLoading() {
