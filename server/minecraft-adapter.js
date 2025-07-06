@@ -3,8 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { pipeline } = require('stream');
+const { promisify } = require('util');
 const archiver = require('archiver');
-const { serverConfig, downloadConfig, backupCompressionLevel } = require('./config.js');
+const { serverConfig, downloadConfig, backupCompressionLevel, geyserServerType } = require('./config.js');
 
 class MinecraftAdapter {
     constructor(broadcastCallback) {
@@ -36,6 +37,9 @@ class MinecraftAdapter {
             if (this.config.serverType === 'java') {
                 await this.prepareJavaServer();
                 serverExecutablePath = path.join(this.config.minecraftDir, this.config.serverJar);
+                if (!fs.existsSync(serverExecutablePath)) {
+                    throw new Error(`Server JAR (${this.config.serverJar}) not found! Please check settings.`);
+                }
                 javaArgs = [`-Xmx${this.config.maxRam}`, `-Xms${this.config.maxRam}`, '-jar', this.config.serverJar, 'nogui'];
             } else if (this.config.serverType === 'bedrock') {
                 serverExecutablePath = path.join(this.config.minecraftDir, this.config.bedrockServerExecutable);
@@ -184,7 +188,11 @@ class MinecraftAdapter {
                 reject(err);
             });
             archive.pipe(output);
-            archive.directory(this.config.minecraftDir, false);
+            // Exclude node_modules from backup to save space and time
+            archive.glob('**', {
+                cwd: this.config.minecraftDir,
+                ignore: ['node_modules/**']
+            });
             archive.finalize();
         });
     }
@@ -192,13 +200,19 @@ class MinecraftAdapter {
     async prepareJavaServer() {
         const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
         if (this.config.enableGeyser) {
-            this.broadcast({ type: 'notification', message: 'Geyser enabled, preparing PaperMC server...', level: 'info' });
-            if (!fs.existsSync(serverJarPath)) {
-                await this.downloadPaperServer();
+            this.broadcast({ type: 'notification', message: `Geyser requires a plugin-compatible server. Preparing ${geyserServerType}...`, level: 'info' });
+            if (!fs.existsSync(serverJarPath) || !this.config.serverJar.toLowerCase().includes(geyserServerType.toLowerCase())) {
+                if (geyserServerType === 'paper') {
+                    await this.downloadPaperServer();
+                } else {
+                    // Placeholder for other server types like Spigot if ever needed
+                    await this.downloadVanillaServer(); // Fallback
+                }
             }
             await this.preparePlugins();
         } else {
-            if (!fs.existsSync(serverJarPath)) {
+            this.broadcast({ type: 'notification', message: 'Preparing vanilla server...', level: 'info' });
+            if (!fs.existsSync(serverJarPath) || this.config.serverJar.toLowerCase().includes('paper')) {
                 await this.downloadVanillaServer();
             }
         }
@@ -235,19 +249,36 @@ class MinecraftAdapter {
         }
     }
     
-    async downloadFile(url, dest) {
+    async downloadFile(url, dest, redirectCount = 0) {
+        if (redirectCount > 10) {
+            throw new Error('Too many redirects');
+        }
+
         return new Promise((resolve, reject) => {
-            const file = fs.createWriteStream(dest);
             https.get(url, (response) => {
-                if (response.statusCode >= 400) return reject(new Error(`Failed to download file: ${response.statusCode}`));
-                if (response.statusCode >= 300 && response.headers.location) {
-                    return this.downloadFile(response.headers.location, dest).then(resolve).catch(reject);
+                if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                    // Handle redirect
+                    this.downloadFile(response.headers.location, dest, redirectCount + 1)
+                        .then(resolve)
+                        .catch(reject);
+                    return;
                 }
+
+                if (response.statusCode !== 200) {
+                    return reject(new Error(`Failed to download file: Status Code ${response.statusCode}`));
+                }
+
+                const file = fs.createWriteStream(dest);
                 pipeline(response, file, (err) => {
-                    if (err) reject(err); else resolve(dest);
+                    file.close();
+                    if (err) {
+                        fs.unlink(dest, () => reject(err)); // Clean up on error
+                    } else {
+                        resolve(dest);
+                    }
                 });
             }).on('error', (err) => {
-                fs.unlink(dest, () => reject(err));
+                fs.unlink(dest, () => reject(err)); // Clean up on error
             });
         });
     }
@@ -264,7 +295,10 @@ class MinecraftAdapter {
             const versionDetails = await versionResponse.json();
             const serverDownloadUrl = versionDetails.downloads.server.url;
             if (!serverDownloadUrl) throw new Error('Could not find server download URL in version details.');
+            
+            this.config.serverJar = `vanilla-${latestVersionId}.jar`;
             const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
+
             await this.downloadFile(serverDownloadUrl, serverJarPath);
             this.broadcast({ type: 'notification', message: `Downloaded ${this.config.serverJar} successfully.`, level: 'success' });
             return serverJarPath;

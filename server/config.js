@@ -52,11 +52,15 @@ const downloadConfig = {
     }
 };
 
+/** @tweakable The server software to use when Geyser is enabled. Must be 'paper' to support plugins. */
+const geyserServerType = 'paper';
+
 /** @tweakable The compression level for zip backups (0-9). 9 is highest compression. */
-const backupCompressionLevel = 9;
+const backupCompressionLevel = 1; // Lowered for performance, 9 can be very slow
 
 module.exports = {
     serverConfig,
     downloadConfig,
-    backupCompressionLevel
+    backupCompressionLevel,
+    geyserServerType
 };
