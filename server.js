@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
+const cors = require('cors');
 
 class MinecraftServerManager {
     constructor() {
@@ -47,13 +48,19 @@ class MinecraftServerManager {
     }
 
     setupExpress() {
-        this.app.use(express.json());
-        this.app.use(express.static('public'));
+        /* @tweakable CORS configuration options */
+        const corsOptions = {
+            origin: '*', // Allow all origins
+            methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+            preflightContinue: false,
+            optionsSuccessStatus: 204
+        };
         
-        // Serve main HTML file
-        this.app.get('/', (req, res) => {
-            res.sendFile(path.join(__dirname, 'index.html'));
-        });
+        this.app.use(cors(corsOptions));
+        this.app.use(express.json());
+        
+        // Serve static files from the project root
+        this.app.use(express.static(__dirname));
         
         // API endpoints
         this.app.get('/api/status', (req, res) => {
