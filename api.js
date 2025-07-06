@@ -191,7 +191,7 @@ export function ping() {
 export function connectManually() {
     if (!state.get().isConnected) {
         ui.showToast('Attempting to connect to bridge...', 'info');
-        connectWebSocket();
+        connectWebSocket(window.handleWebSocketMessage); // Use global handler
     } else {
         ui.showToast('Already connected.', 'info');
     }

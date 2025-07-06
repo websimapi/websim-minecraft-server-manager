@@ -9,7 +9,7 @@ export function sendWebSocketMessage(message) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(message));
     } else {
-        ui.showToast('Not connected to server', 'error');
+        ui.showToast('Not connected to bridge', 'error');
     }
 }
 
@@ -21,7 +21,7 @@ function attemptReconnect() {
         const reconnectDelay = reconnectInterval;
         setTimeout(() => connectWebSocket(messageHandler), reconnectDelay);
     } else {
-        ui.showToast('Failed to connect to server after multiple attempts.', 'error');
+        ui.showToast('Failed to connect to bridge after multiple attempts.', 'error');
         console.error('Max reconnection attempts reached.');
     }
 }
@@ -34,7 +34,7 @@ export function connectWebSocket(handler) {
             return;
         }
 
-        ui.updateConnectionStatus(false, true); // Set to connecting state
+        ui.updateBridgeStatus('connecting');
         socket = new WebSocket(wsUrl);
 
         socket.onopen = () => {
@@ -42,7 +42,7 @@ export function connectWebSocket(handler) {
             state.setConnected(true);
             state.resetReconnectAttempts();
             ui.showToast('Connected to server bridge', 'success');
-            ui.updateConnectionStatus(true);
+            ui.updateBridgeStatus('connected');
         };
 
         socket.onmessage = (event) => {
@@ -57,8 +57,8 @@ export function connectWebSocket(handler) {
         socket.onclose = () => {
             console.log('WebSocket disconnected');
             state.setConnected(false);
-            ui.updateServerStatus(false); // Visually indicate disconnection
-            ui.updateConnectionStatus(false);
+            ui.updateMinecraftServerStatus(false); // Visually indicate server is offline if bridge disconnects
+            ui.updateBridgeStatus('disconnected');
             if (state.get().autoReconnect) {
                 attemptReconnect();
             }
@@ -67,12 +67,12 @@ export function connectWebSocket(handler) {
         socket.onerror = (error) => {
             console.error('WebSocket error:', error);
             ui.showToast('Connection error', 'error');
-            ui.updateConnectionStatus(false);
+            ui.updateBridgeStatus('disconnected');
             // onclose will be called next, triggering reconnect logic
         };
     } catch (error) {
         console.error('Failed to create WebSocket:', error);
-        ui.updateConnectionStatus(false);
+        ui.updateBridgeStatus('disconnected');
         if (state.get().autoReconnect) {
             attemptReconnect();
         }

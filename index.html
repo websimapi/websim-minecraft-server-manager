@@ -52,12 +52,15 @@
             <header class="header">
                 <div class="header-left">
                     <h1 class="page-title">Dashboard</h1>
-                    <div class="server-status">
-                        <div class="status-indicator offline" id="statusIndicator"></div>
-                        <span id="statusText">Offline</span>
-                    </div>
-                    <div class="connection-status" id="connectionStatus" title="Disconnected from bridge. Click to connect.">
-                        <i class="fas fa-unlink" id="connectionIcon"></i>
+                    <div class="status-group">
+                        <div class="status-display" id="bridgeStatusContainer" title="Disconnected from bridge. Click to connect.">
+                            <div class="status-indicator disconnected" id="bridgeStatusIndicator"></div>
+                            <span id="bridgeStatusText">Bridge Disconnected</span>
+                        </div>
+                        <div class="status-display" id="serverStatusContainer">
+                            <div class="status-indicator offline" id="serverStatusIndicator"></div>
+                            <span id="serverStatusText">Server Offline</span>
+                        </div>
                     </div>
                 </div>
                 <div class="header-right">

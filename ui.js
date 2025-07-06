@@ -46,7 +46,7 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
-    document.getElementById('connectionStatus').addEventListener('click', () => apiHandler.connectManually());
+    document.getElementById('bridgeStatusContainer').addEventListener('click', () => apiHandler.connectManually());
 
     const geyserCheck = document.getElementById('enableGeyserCheck');
     const floodgateGroup = document.getElementById('floodgateGroup');
@@ -71,19 +71,19 @@ export function initialize(api) {
     bindEventListeners();
 }
 
-export function updateServerStatus(online, stats = {}) {
-    const statusIndicator = document.getElementById('statusIndicator');
-    const statusText = document.getElementById('statusText');
+export function updateMinecraftServerStatus(online, stats = {}) {
+    const statusIndicator = document.getElementById('serverStatusIndicator');
+    const statusText = document.getElementById('serverStatusText');
     const startStopBtn = document.getElementById('startStopBtn');
 
     if (online) {
         statusIndicator.className = 'status-indicator online';
-        statusText.textContent = 'Online';
+        statusText.textContent = 'Server Online';
         startStopBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Server';
         startStopBtn.className = 'btn btn-secondary';
     } else {
         statusIndicator.className = 'status-indicator offline';
-        statusText.textContent = 'Offline';
+        statusText.textContent = 'Server Offline';
         startStopBtn.innerHTML = '<i class="fas fa-play"></i> Start Server';
         startStopBtn.className = 'btn btn-primary';
     }
@@ -94,21 +94,30 @@ export function updateServerStatus(online, stats = {}) {
     document.getElementById('tps').textContent = stats.tps ?? '20.0';
 }
 
-export function updateConnectionStatus(connected, connecting = false) {
-    const icon = document.getElementById('connectionIcon');
-    const container = document.getElementById('connectionStatus');
+export function updateBridgeStatus(status) { 
+    const indicator = document.getElementById('bridgeStatusIndicator');
+    const text = document.getElementById('bridgeStatusText');
+    const container = document.getElementById('bridgeStatusContainer');
 
-    icon.classList.remove('fa-link', 'fa-unlink', 'fa-spin');
+    indicator.classList.remove('connected', 'disconnected', 'connecting');
 
-    if (connecting) {
-        icon.classList.add('fa-link', 'fa-spin');
-        container.title = 'Connecting to bridge...';
-    } else if (connected) {
-        icon.classList.add('fa-link');
-        container.title = 'Connected to bridge.';
-    } else {
-        icon.classList.add('fa-unlink');
-        container.title = 'Disconnected from bridge. Click to connect.';
+    switch (status) {
+        case 'connected':
+            indicator.classList.add('connected');
+            text.textContent = 'Bridge Connected';
+            container.title = 'Connected to bridge.';
+            break;
+        case 'connecting':
+            indicator.classList.add('connecting');
+            text.textContent = 'Bridge Connecting';
+            container.title = 'Connecting to bridge...';
+            break;
+        case 'disconnected':
+        default:
+            indicator.classList.add('disconnected');
+            text.textContent = 'Bridge Disconnected';
+            container.title = 'Disconnected from bridge. Click to connect.';
+            break;
     }
 }
 
