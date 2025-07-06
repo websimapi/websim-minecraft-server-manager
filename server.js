@@ -4,6 +4,9 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
+const https = require('https');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
 
 class MinecraftServerManager {
     constructor() {
@@ -27,11 +30,24 @@ class MinecraftServerManager {
             minecraftDir: './minecraft',
             javaPath: 'java',
             serverJar: 'server.jar',
+            bedrockServerExecutable: 'bedrock_server',
             maxRam: '2G',
             serverType: 'java', // 'java' or 'bedrock'
             autoStart: false
         };
         
+        /* @tweakable Minecraft server download URLs and settings */
+        this.downloadConfig = {
+            java: {
+                versionManifestUrl: 'https://launchermeta.mojang.com/mc/game/version_manifest.json',
+                latestVersionType: 'release' // 'release' or 'snapshot'
+            },
+            bedrock: {
+                downloadPageUrl: 'https://www.minecraft.net/en-us/download/server/bedrock',
+                downloadLinkRegex: /https:\/\/minecraft\.azureedge\.net\/bin-linux\/bedrock-server-([\d\.]+)\.zip/
+            }
+        };
+
         this.initializeServer();
     }
 
@@ -181,7 +197,71 @@ rcon.password=minecraft
         }
     }
 
-    startMinecraftServer() {
+    async downloadFile(url, dest) {
+        return new Promise((resolve, reject) => {
+            const file = fs.createWriteStream(dest);
+            https.get(url, (response) => {
+                if (response.statusCode >= 400) {
+                    return reject(new Error(`Failed to download file: ${response.statusCode}`));
+                }
+                // Handle redirects
+                if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                    return this.downloadFile(response.headers.location, dest).then(resolve).catch(reject);
+                }
+                pipeline(response, file, (err) => {
+                    file.close();
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(dest);
+                    }
+                });
+            }).on('error', (err) => {
+                fs.unlink(dest, () => reject(err));
+            });
+        });
+    }
+
+    async downloadJavaServer() {
+        try {
+            this.broadcastMessage({ type: 'notification', message: 'Downloading latest Java server...', level: 'info' });
+            
+            const manifestResponse = await fetch(this.downloadConfig.java.versionManifestUrl);
+            const manifest = await manifestResponse.json();
+            
+            const latestVersionId = manifest.latest[this.downloadConfig.java.latestVersionType];
+            const versionData = manifest.versions.find(v => v.id === latestVersionId);
+
+            if (!versionData) {
+                throw new Error(`Could not find version data for ${latestVersionId}`);
+            }
+
+            const versionResponse = await fetch(versionData.url);
+            const versionDetails = await versionResponse.json();
+            const serverDownloadUrl = versionDetails.downloads.server.url;
+
+            if (!serverDownloadUrl) {
+                throw new Error('Could not find server download URL in version details.');
+            }
+            
+            const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
+            await this.downloadFile(serverDownloadUrl, serverJarPath);
+
+            this.broadcastMessage({ type: 'notification', message: `Downloaded ${this.config.serverJar} successfully.`, level: 'success' });
+            return serverJarPath;
+        } catch (error) {
+            console.error('Failed to download Java server:', error);
+            this.broadcastMessage({ type: 'error', message: `Failed to download Java server: ${error.message}` });
+            throw error;
+        }
+    }
+
+    async downloadBedrockServer() {
+        this.broadcastMessage({ type: 'notification', message: 'Bedrock server download is not implemented yet. Please add the executable manually.', level: 'warning' });
+        throw new Error('Bedrock server download is not implemented.');
+    }
+
+    async startMinecraftServer() {
         if (this.minecraftProcess) {
             this.broadcastMessage({
                 type: 'notification',
@@ -191,30 +271,52 @@ rcon.password=minecraft
             return;
         }
         
-        const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
-        
-        if (!fs.existsSync(serverJarPath)) {
-            this.broadcastMessage({
-                type: 'error',
-                message: 'Server JAR file not found. Please upload a server.jar file.'
-            });
-            return;
+        let serverExecutablePath;
+        let javaArgs = [];
+
+        try {
+            if (this.config.serverType === 'java') {
+                serverExecutablePath = path.join(this.config.minecraftDir, this.config.serverJar);
+                if (!fs.existsSync(serverExecutablePath)) {
+                    await this.downloadJavaServer();
+                }
+                javaArgs = [
+                    `-Xmx${this.config.maxRam}`,
+                    `-Xms${this.config.maxRam}`,
+                    '-jar',
+                    this.config.serverJar,
+                    'nogui'
+                ];
+            } else if (this.config.serverType === 'bedrock') {
+                serverExecutablePath = path.join(this.config.minecraftDir, this.config.bedrockServerExecutable);
+                if (!fs.existsSync(serverExecutablePath)) {
+                    await this.downloadBedrockServer();
+                }
+                // For Bedrock, the executable is run directly
+            } else {
+                throw new Error(`Unsupported server type: ${this.config.serverType}`);
+            }
+        } catch (error) {
+            this.broadcastMessage({ type: 'error', message: `Could not prepare server: ${error.message}`});
+            return; // Stop if download failed
         }
         
-        const javaArgs = [
-            `-Xmx${this.config.maxRam}`,
-            `-Xms${this.config.maxRam}`,
-            '-jar',
-            this.config.serverJar,
-            'nogui'
-        ];
-        
         console.log('Starting Minecraft server...');
-        this.minecraftProcess = spawn(this.config.javaPath, javaArgs, {
-            cwd: this.config.minecraftDir,
-            stdio: ['pipe', 'pipe', 'pipe']
-        });
+        this.minecraftProcess = spawn(
+            this.config.serverType === 'java' ? this.config.javaPath : serverExecutablePath, 
+            this.config.serverType === 'java' ? javaArgs : [], 
+            {
+                cwd: this.config.minecraftDir,
+                stdio: ['pipe', 'pipe', 'pipe']
+            }
+        );
         
+        this.minecraftProcess.on('error', (err) => {
+            console.error(`Failed to start server process: ${err.message}`);
+            this.broadcastMessage({ type: 'error', message: `Failed to start server: ${err.message}. Ensure Java is installed and in your PATH.` });
+            this.minecraftProcess = null;
+        });
+
         this.minecraftProcess.stdout.on('data', (data) => {
             const output = data.toString();
             this.parseServerOutput(output);
