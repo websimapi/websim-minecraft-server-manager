@@ -4,7 +4,6 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
-const cors = require('cors');
 
 class MinecraftServerManager {
     constructor() {
@@ -48,19 +47,13 @@ class MinecraftServerManager {
     }
 
     setupExpress() {
-        /* @tweakable CORS configuration options */
-        const corsOptions = {
-            origin: '*', // Allow all origins
-            methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-            preflightContinue: false,
-            optionsSuccessStatus: 204
-        };
-        
-        this.app.use(cors(corsOptions));
         this.app.use(express.json());
-        
-        // Serve static files from the project root
         this.app.use(express.static(__dirname));
+        
+        // Serve main HTML file
+        this.app.get('/', (req, res) => {
+            res.sendFile(path.join(__dirname, 'index.html'));
+        });
         
         // API endpoints
         this.app.get('/api/status', (req, res) => {
@@ -89,12 +82,26 @@ class MinecraftServerManager {
         this.app.get('/api/download-bridge', (req, res) => {
             /* @tweakable filename for the downloaded server bridge zip */
             const zipFilename = 'mc-manager-bridge.zip';
+            const output = fs.createWriteStream(zipFilename);
             const archive = archiver('zip', {
                 zlib: { level: 9 }
             });
 
-            res.attachment(zipFilename);
-            archive.pipe(res);
+            output.on('close', () => {
+                res.download(zipFilename, zipFilename, (err) => {
+                    if (err) {
+                        console.error('Error sending file:', err);
+                    }
+                    // Clean up the zip file after download
+                    fs.unlinkSync(zipFilename);
+                });
+            });
+            
+            archive.on('error', (err) => {
+                res.status(500).send({error: err.message});
+            });
+
+            archive.pipe(output);
 
             const readmeContent = `
 # Minecraft Server Manager - Node.js Bridge
@@ -112,7 +119,7 @@ Thank you for downloading the server bridge!
     npm install
     \`\`\`
 
-4.  **Add Minecraft Server Jar:** Place your Minecraft server .jar file (e.g., 'server.jar') inside the 'minecraft' directory.
+4.  **Add Minecraft Server Jar:** Place your Minecraft server .jar file (e.g., 'server.jar') inside the 'minecraft' directory. Make sure to accept the EULA by creating a 'eula.txt' file in the 'minecraft' directory with the content 'eula=true'.
 
 5.  **Run the Bridge:** Start the server bridge by running:
     \`\`\`
@@ -123,12 +130,14 @@ The manager backend will now be running. You can access the web interface in you
             `.trim();
 
             archive.append(readmeContent, { name: 'README.md' });
-            archive.file('server.js', { name: 'server.js' });
-            archive.file('package.json', { name: 'package.json' });
-            archive.directory(path.join(__dirname, 'public/'), 'public');
+            archive.file(path.join(__dirname, 'server.js'), { name: 'server.js' });
+            archive.file(path.join(__dirname, 'package.json'), { name: 'package.json' });
+            archive.file(path.join(__dirname, 'index.html'), { name: 'index.html' });
+            archive.file(path.join(__dirname, 'styles.css'), { name: 'styles.css' });
+            archive.file(path.join(__dirname, 'app.js'), { name: 'app.js' });
             
             // Add an empty minecraft directory to guide the user
-            archive.append(null, { name: 'minecraft/' });
+            archive.directory(path.join(__dirname, 'minecraft/'), 'minecraft');
 
             archive.finalize();
         });
