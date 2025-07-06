@@ -376,6 +376,9 @@ rcon.password=minecraft
     }
 
     async createBackup() {
+        /** @tweakable The compression level for zip backups (0-9). 9 is highest compression. */
+        const zipCompressionLevel = 9;
+
         return new Promise((resolve, reject) => {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             const backupFilename = `backup-${timestamp}.zip`;
@@ -388,7 +391,7 @@ rcon.password=minecraft
             }
             
             const output = fs.createWriteStream(backupPath);
-            const archive = archiver('zip', { zlib: { level: 9 } });
+            const archive = archiver('zip', { zlib: { level: zipCompressionLevel } });
             
             output.on('close', () => {
                 this.broadcastMessage({
