@@ -1,6 +1,26 @@
 module.exports.parseServerOutput = function(output) {
     const lines = output.split('\n');
     lines.forEach(line => {
+        // pause detection: stop TPS polling and broadcast paused state
+        if (line.includes('Server empty') && line.includes('pausing')) {
+            if (this.debugInterval) {
+                clearInterval(this.debugInterval);
+                this.debugInterval = null;
+            }
+            if (this.debugTimeout) {
+                clearTimeout(this.debugTimeout);
+                this.debugTimeout = null;
+            }
+            this.stats.tps = 'Paused';
+            this.broadcast({
+                type: 'status',
+                online: this.serverStatus === 'online',
+                stats: this.stats,
+                startTime: this.startTime
+            });
+            return; // skip further parsing for this line
+        }
+
         if (line.includes('joined the game')) {
             const playerName = line.match(/(\w+) joined the game/)?.[1];
             if (playerName && !this.players.find(p => p.name === playerName)) {

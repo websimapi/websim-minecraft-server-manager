@@ -89,6 +89,7 @@ export function updateServerStatus(online, stats = {}, startTime = null) {
     const statusText = document.getElementById('serverStatusText');
     const startStopBtn = document.getElementById('startStopBtn');
 
+    // online/offline toggle
     if (online) {
         statusIndicator.className = 'status-indicator online';
         statusText.textContent = 'Server Online';
@@ -101,17 +102,29 @@ export function updateServerStatus(online, stats = {}, startTime = null) {
         startStopBtn.className = 'btn btn-primary';
     }
 
+    // update player count
     document.getElementById('playerCount').textContent = stats.players ?? '0';
-    document.getElementById('ramUsage').textContent = stats.ram ?? '0 MB';
-    document.getElementById('tps').textContent = stats.tps ?? '20.0';
 
+    // update RAM usage and attach last-updated tooltip
+    const ramEl = document.getElementById('ramUsage');
+    ramEl.textContent = stats.ram ?? '0 MB';
+    ramEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
+
+    // update TPS (numeric or paused icon) and attach last-updated tooltip
+    const tpsEl = document.getElementById('tps');
+    if (stats.tps === 'Paused') {
+        tpsEl.innerHTML = '<i class="fas fa-pause"></i> Paused';
+    } else {
+        tpsEl.textContent = stats.tps ?? '20.0';
+    }
+    tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
+
+    // uptime handling remains unchanged
     const uptimeElement = document.getElementById('uptime');
-    // clear existing timer
     if (uptimeIntervalId) {
         clearInterval(uptimeIntervalId);
         uptimeIntervalId = null;
     }
-
     if (online && startTime) {
         const updateUptime = () => {
             const elapsedMs = Date.now() - startTime;
@@ -122,11 +135,9 @@ export function updateServerStatus(online, stats = {}, startTime = null) {
             const milliseconds = (elapsedMs % 1000).toString().padStart(3, '0');
             uptimeElement.textContent = `${hours}:${minutes}:${seconds}.${milliseconds}`;
         };
-        // initial render and periodic update
         updateUptime();
         uptimeIntervalId = setInterval(updateUptime, 100);
     } else {
-        // offline or no startTime
         uptimeElement.textContent = '00:00:00.000';
     }
 }
