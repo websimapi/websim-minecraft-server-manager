@@ -6,6 +6,7 @@ const { promisify } = require('util');
 const archiver = require('archiver');
 const fetch = require('node-fetch');
 const { serverConfig, downloadConfig, backupCompressionLevel, geyserServerType, disablePaperPluginRemapper } = require('./config.js');
+const { prepareServer } = require('./server-preparer.js');
 
 class MinecraftAdapter {
     constructor(broadcastCallback) {
@@ -22,11 +23,6 @@ class MinecraftAdapter {
             tps: '20.0'
         };
         this.startTime = null;
-        
-        /* @tweakable maximum number of download retry attempts */
-        this.maxRetries = 3;
-        /* @tweakable delay between download retry attempts in milliseconds */
-        this.retryDelay = 2000;
     }
 
     async start() {
@@ -35,40 +31,44 @@ class MinecraftAdapter {
             return;
         }
 
-        let serverExecutablePath;
-        let javaArgs = [];
-
         try {
-            if (this.config.serverType === 'java') {
-                await this.prepareJavaServer();
-                serverExecutablePath = path.join(this.config.minecraftDir, this.config.serverJar);
-                if (!fs.existsSync(serverExecutablePath)) {
-                    throw new Error(`Server JAR (${this.config.serverJar}) not found! Please check settings.`);
-                }
-                javaArgs = [`-Xmx${this.config.maxRam}`, `-Xms${this.config.maxRam}`];
-                if (this.config.serverType === 'java' && this.config.serverJar.toLowerCase().includes('paper') && disablePaperPluginRemapper) {
-                    javaArgs.push('-Dpaper.use-legacy-plugin-loading=true');
-                }
-                javaArgs.push('-jar', this.config.serverJar, 'nogui');
-            } else if (this.config.serverType === 'bedrock') {
-                serverExecutablePath = path.join(this.config.minecraftDir, this.config.bedrockServerExecutable);
-                if (!fs.existsSync(serverExecutablePath)) {
-                    await this.downloadBedrockServer();
-                }
-            } else {
-                throw new Error(`Unsupported server type: ${this.config.serverType}`);
+            const newJarName = await prepareServer(this.config, this.broadcast);
+            if (this.config.serverType === 'java' && newJarName) {
+                this.config.serverJar = newJarName;
             }
+
+            const serverExecutablePath = this.config.serverType === 'java'
+                ? path.join(this.config.minecraftDir, this.config.serverJar)
+                : path.join(this.config.minecraftDir, this.config.bedrockServerExecutable);
+
+            if (!fs.existsSync(serverExecutablePath)) {
+                throw new Error(`Server executable (${path.basename(serverExecutablePath)}) not found! Please check settings.`);
+            }
+
+            let execArgs = [];
+            let execCommand = '';
+
+            if (this.config.serverType === 'java') {
+                execCommand = this.config.javaPath;
+                execArgs = [`-Xmx${this.config.maxRam}`, `-Xms${this.config.maxRam}`];
+                if (this.config.serverJar.toLowerCase().includes('paper') && disablePaperPluginRemapper) {
+                    execArgs.push('-Dpaper.use-legacy-plugin-loading=true');
+                }
+                execArgs.push('-jar', this.config.serverJar, 'nogui');
+            } else { // bedrock
+                execCommand = serverExecutablePath;
+            }
+
+            console.log(`Starting Minecraft server: ${execCommand} ${execArgs.join(' ')}`);
+            this.minecraftProcess = spawn(execCommand, execArgs, {
+                cwd: this.config.minecraftDir,
+                stdio: ['pipe', 'pipe', 'pipe']
+            });
+
         } catch (error) {
-            this.broadcast({ type: 'error', message: `Could not prepare server: ${error.message}` });
+            this.broadcast({ type: 'error', message: `Could not start server: ${error.message}` });
             return;
         }
-
-        console.log('Starting Minecraft server...');
-        this.minecraftProcess = spawn(
-            this.config.serverType === 'java' ? this.config.javaPath : serverExecutablePath,
-            this.config.serverType === 'java' ? javaArgs : [],
-            { cwd: this.config.minecraftDir, stdio: ['pipe', 'pipe', 'pipe'] }
-        );
 
         this.setupProcessEventListeners();
 
@@ -247,7 +247,13 @@ class MinecraftAdapter {
     }
 
     updateSettings(settings) {
-        this.config = { ...this.config, ...settings };
+        // Only update serverJar if it's manually changed in a future settings UI, not from auto-download
+        const newConfig = { ...this.config, ...settings };
+        if (this.config.serverJar !== settings.serverJar) {
+             this.config.serverJar = settings.serverJar;
+        }
+        this.config = newConfig;
+
         fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(this.config, null, 2));
         if (settings.port || settings.maxPlayers) this.updateServerProperties(settings);
         this.broadcast({ type: 'notification', message: 'Settings updated successfully. A restart is required for some changes to take effect.', level: 'success' });
@@ -263,32 +269,10 @@ class MinecraftAdapter {
         }
     }
     
-    async downloadFileWithRetry(url, dest, retryCount = 0) {
-        try {
-            await this.downloadFile(url, dest);
-        } catch (error) {
-            if (retryCount < this.maxRetries) {
-                this.broadcast({ 
-                    type: 'notification', 
-                    message: `Download failed, retrying... (${retryCount + 1}/${this.maxRetries})`, 
-                    level: 'warning' 
-                });
-                await new Promise(resolve => setTimeout(resolve, this.retryDelay));
-                return this.downloadFileWithRetry(url, dest, retryCount + 1);
-            } else {
-                throw error;
-            }
-        }
-    }
-
     async downloadFile(url, dest) {
         this.broadcast({ type: 'notification', message: `Downloading ${path.basename(dest)}...`, level: 'info' });
         try {
-            const response = await fetch(url, { 
-                redirect: 'follow',
-                /* @tweakable HTTP timeout for file downloads in milliseconds */
-                timeout: 30000
-            });
+            const response = await fetch(url, { redirect: 'follow' });
             if (!response.ok) {
                 throw new Error(`Failed to download file: Status Code ${response.status} ${response.statusText}`);
             }
@@ -322,7 +306,7 @@ class MinecraftAdapter {
             this.config.serverJar = `vanilla-${latestVersionId}.jar`;
             const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
 
-            await this.downloadFileWithRetry(serverDownloadUrl, serverJarPath);
+            await this.downloadFile(serverDownloadUrl, serverJarPath);
             this.broadcast({ type: 'notification', message: `Downloaded ${this.config.serverJar} successfully.`, level: 'success' });
             return serverJarPath;
         } catch (error) {
@@ -350,7 +334,7 @@ class MinecraftAdapter {
             this.config.serverJar = jarName; // Update serverJar to the new Paper jar name
             const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
             
-            await this.downloadFileWithRetry(downloadUrl, serverJarPath);
+            await this.downloadFile(downloadUrl, serverJarPath);
             return serverJarPath;
         } catch (error) {
             console.error('Failed to download PaperMC server:', error);
@@ -366,7 +350,7 @@ class MinecraftAdapter {
             return;
         }
         try {
-            await this.downloadFileWithRetry(this.downloadConfig.geyser.downloadUrl, geyserJarPath);
+            await this.downloadFile(this.downloadConfig.geyser.downloadUrl, geyserJarPath);
         } catch (error) {
             console.error('Failed to download Geyser plugin:', error);
             this.broadcast({ type: 'error', message: `Failed to download Geyser: ${error.message}` });
@@ -380,7 +364,7 @@ class MinecraftAdapter {
             return;
         }
         try {
-            await this.downloadFileWithRetry(this.downloadConfig.floodgate.downloadUrl, floodgateJarPath);
+            await this.downloadFile(this.downloadConfig.floodgate.downloadUrl, floodgateJarPath);
         } catch (error) {
             console.error('Failed to download Floodgate plugin:', error);
             this.broadcast({ type: 'error', message: `Failed to download Floodgate: ${error.message}` });
