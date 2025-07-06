@@ -104,7 +104,7 @@ export function uploadFile(file) {
 }
 
 export function saveSettings() {
-    const serverSettings = {
+    const settings = {
         serverType: document.getElementById('serverTypeSelect').value,
         maxPlayers: parseInt(document.getElementById('maxPlayersInput').value, 10),
         port: parseInt(document.getElementById('portInput').value, 10),
@@ -114,13 +114,8 @@ export function saveSettings() {
         enableFloodgate: document.getElementById('enableFloodgateCheck').checked
     };
 
-    // Save client-side settings
-    const autoReconnect = document.getElementById('autoReconnectCheck').checked;
-    state.setAutoReconnect(autoReconnect);
-
-    // Send server-side settings to the bridge
-    sendWebSocketMessage({ type: 'settings', settings: serverSettings });
-    ui.showToast('Settings saved. A server restart may be required for some changes to take effect.', 'info');
+    sendWebSocketMessage({ type: 'settings', settings });
+    ui.showToast('Settings saved. A server restart is required for changes to take effect.', 'info');
 }
 
 export function downloadBridge() {

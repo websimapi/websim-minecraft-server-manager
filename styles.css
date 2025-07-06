@@ -33,11 +33,6 @@
     --header-height: 80px;
     --border-radius: 12px;
     --transition-speed: 0.3s;
-    
-    /* @tweakable colors for bridge connection status */
-    --bridge-connected-color: #10b981; /* Default: success green */
-    --bridge-disconnected-color: #ef4444; /* Default: error red */
-    --bridge-connecting-color: #f59e0b; /* Default: warning orange */
 }
 
 body {
@@ -176,46 +171,11 @@ body {
     margin: 0;
 }
 
-.status-group {
+/* @tweakable gap between the status indicators in pixels */
+.status-container {
     display: flex;
     align-items: center;
     gap: 16px;
-}
-
-.status-display {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: var(--bg-tertiary);
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color var(--transition-speed) ease;
-}
-
-#bridgeStatusContainer {
-    cursor: pointer;
-}
-
-#bridgeStatusContainer:hover {
-    background-color: var(--bg-primary);
-}
-
-.connection-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 8px;
-    transition: all var(--transition-speed) ease;
-}
-
-.connection-status:hover {
-    color: var(--text-primary);
-    transform: scale(1.1);
 }
 
 .server-status {
@@ -236,22 +196,6 @@ body {
     animation: pulse 2s infinite;
 }
 
-.status-indicator.connected {
-    background: var(--bridge-connected-color);
-    box-shadow: 0 0 12px var(--bridge-connected-color);
-}
-
-.status-indicator.disconnected {
-    background: var(--bridge-disconnected-color);
-    box-shadow: 0 0 12px var(--bridge-disconnected-color);
-    animation: none; /* No pulse when disconnected */
-}
-
-.status-indicator.connecting {
-    background: var(--bridge-connecting-color);
-    box-shadow: 0 0 12px var(--bridge-connecting-color);
-}
-
 .status-indicator.online {
     background: var(--success-color);
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
@@ -260,7 +204,6 @@ body {
 .status-indicator.offline {
     background: var(--error-color);
     box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
-    animation: none; /* No pulse when offline */
 }
 
 @keyframes pulse {
@@ -730,14 +673,6 @@ body {
     width: 20px;
     height: 20px;
     accent-color: var(--primary-color);
-}
-
-.form-group-checkbox {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0;
 }
 
 /* Loading Overlay */

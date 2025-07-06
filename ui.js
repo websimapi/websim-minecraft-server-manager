@@ -1,7 +1,6 @@
 import * as state from './state.js';
 
 let apiHandler = {};
-let connectHandler = () => {};
 
 function switchSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
@@ -11,9 +10,7 @@ function switchSection(sectionId) {
 
     const pageTitle = document.querySelector('.page-title');
     if (pageTitle) {
-        // Ensure sectionId exists before trying to manipulate it
-        const title = sectionId ? sectionId.charAt(0).toUpperCase() + sectionId.slice(1) : 'Dashboard';
-        pageTitle.textContent = title;
+        pageTitle.textContent = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
     }
 }
 
@@ -49,14 +46,6 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
-    document.getElementById('bridgeStatusContainer').addEventListener('click', () => {
-        if (!state.get().isConnected) {
-            ui.showToast('Attempting to connect to bridge...', 'info');
-            connectHandler();
-        } else {
-            ui.showToast('Already connected.', 'info');
-        }
-    });
 
     const geyserCheck = document.getElementById('enableGeyserCheck');
     const floodgateGroup = document.getElementById('floodgateGroup');
@@ -76,15 +65,25 @@ function bindEventListeners() {
     toggleFloodgate();
 }
 
-export function initialize(api, connectCallback) {
+export function initialize(api) {
     apiHandler = api;
-    connectHandler = connectCallback;
     bindEventListeners();
-    // Default to dashboard on load
-    switchSection('dashboard');
 }
 
-export function updateMinecraftServerStatus(online, stats = {}) {
+export function updateBridgeStatus(connected) {
+    const statusIndicator = document.getElementById('bridgeStatusIndicator');
+    const statusText = document.getElementById('bridgeStatusText');
+
+    if (connected) {
+        statusIndicator.className = 'status-indicator online';
+        statusText.textContent = 'Bridge Online';
+    } else {
+        statusIndicator.className = 'status-indicator offline';
+        statusText.textContent = 'Bridge Offline';
+    }
+}
+
+export function updateServerStatus(online, stats = {}) {
     const statusIndicator = document.getElementById('serverStatusIndicator');
     const statusText = document.getElementById('serverStatusText');
     const startStopBtn = document.getElementById('startStopBtn');
@@ -105,37 +104,6 @@ export function updateMinecraftServerStatus(online, stats = {}) {
     document.getElementById('uptime').textContent = stats.uptime ?? '00:00:00';
     document.getElementById('ramUsage').textContent = stats.ram ?? '0 MB';
     document.getElementById('tps').textContent = stats.tps ?? '20.0';
-}
-
-export function updateBridgeStatus(status) { 
-    const indicator = document.getElementById('bridgeStatusIndicator');
-    const text = document.getElementById('bridgeStatusText');
-    const container = document.getElementById('bridgeStatusContainer');
-
-    indicator.classList.remove('connected', 'disconnected', 'connecting');
-
-    switch (status) {
-        case 'connected':
-            indicator.classList.add('connected');
-            text.textContent = 'Bridge Connected';
-            container.title = 'Connected to bridge.';
-            break;
-        case 'connecting':
-            indicator.classList.add('connecting');
-            text.textContent = 'Bridge Connecting';
-            container.title = 'Connecting to bridge...';
-            break;
-        case 'disconnected':
-        default:
-            indicator.classList.add('disconnected');
-            text.textContent = 'Bridge Disconnected';
-            container.title = 'Disconnected from bridge. Click to connect.';
-            break;
-    }
-}
-
-export function applyClientSettings() {
-    document.getElementById('autoReconnectCheck').checked = state.get().autoReconnect;
 }
 
 export function updatePlayersList(players) {

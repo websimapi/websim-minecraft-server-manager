@@ -52,12 +52,12 @@
             <header class="header">
                 <div class="header-left">
                     <h1 class="page-title">Dashboard</h1>
-                    <div class="status-group">
-                        <div class="status-display" id="bridgeStatusContainer" title="Disconnected from bridge. Click to connect.">
-                            <div class="status-indicator disconnected" id="bridgeStatusIndicator"></div>
-                            <span id="bridgeStatusText">Bridge Disconnected</span>
+                    <div class="status-container">
+                        <div class="server-status" id="bridgeStatus">
+                            <div class="status-indicator offline" id="bridgeStatusIndicator"></div>
+                            <span id="bridgeStatusText">Bridge Offline</span>
                         </div>
-                        <div class="status-display" id="serverStatusContainer">
+                        <div class="server-status" id="serverStatus">
                             <div class="status-indicator offline" id="serverStatusIndicator"></div>
                             <span id="serverStatusText">Server Offline</span>
                         </div>
@@ -304,10 +304,6 @@
                                 <div class="form-group" id="floodgateGroup">
                                     <label>Enable Floodgate (Bedrock Offline-Mode)</label>
                                     <input type="checkbox" id="enableFloodgateCheck">
-                                </div>
-                                <div class="form-group form-group-checkbox">
-                                    <label for="autoReconnectCheck">Auto-reconnect on Disconnect</label>
-                                    <input type="checkbox" id="autoReconnectCheck">
                                 </div>
                                 <button class="btn btn-primary" id="saveSettingsBtn">
                                     <i class="fas fa-save"></i>

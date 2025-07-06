@@ -11,7 +11,7 @@ function handleWebSocketMessage(data) {
             break;
         case 'status':
             state.setServerStatus(data.online ? 'online' : 'offline');
-            ui.updateMinecraftServerStatus(data.online, data.stats);
+            ui.updateServerStatus(data.online, data.stats);
             ui.hideLoading();
             break;
         case 'players':
@@ -36,25 +36,16 @@ function handleWebSocketMessage(data) {
 function startPeriodicUpdates() {
     setInterval(() => {
         if (state.get().isConnected) {
-            sendWebSocketMessage({ type: 'ping' });
+            api.ping();
         }
     }, updateInterval);
 }
 
-function connect() {
-    connectWebSocket(handleWebSocketMessage);
-}
-
 function initialize() {
-    ui.initialize(api, connect);
-    state.loadClientSettings(); // Load settings from localStorage
-    ui.applyClientSettings(); // Update UI with loaded settings
-    ui.updateMinecraftServerStatus(false);
-    if (state.get().autoReconnect) {
-        connect();
-    } else {
-        ui.updateBridgeStatus('disconnected');
-    }
+    ui.initialize(api);
+    ui.updateBridgeStatus(false);
+    ui.updateServerStatus(false);
+    connectWebSocket(handleWebSocketMessage);
     startPeriodicUpdates();
 }
 
