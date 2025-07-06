@@ -78,6 +78,53 @@ class MinecraftServerManager {
                     res.status(500).json({ success: false, error: error.message });
                 });
         });
+
+        this.app.get('/api/download-bridge', (req, res) => {
+            /* @tweakable filename for the downloaded server bridge zip */
+            const zipFilename = 'mc-manager-bridge.zip';
+            const archive = archiver('zip', {
+                zlib: { level: 9 }
+            });
+
+            res.attachment(zipFilename);
+            archive.pipe(res);
+
+            const readmeContent = `
+# Minecraft Server Manager - Node.js Bridge
+
+Thank you for downloading the server bridge!
+
+## Instructions:
+
+1.  **Prerequisites:** You need to have Node.js installed. You can download it from [https://nodejs.org/](https://nodejs.org/).
+
+2.  **Unzip:** Extract the contents of this .zip file into a folder.
+
+3.  **Install Dependencies:** Open a terminal or command prompt in that folder and run:
+    \`\`\`
+    npm install
+    \`\`\`
+
+4.  **Add Minecraft Server Jar:** Place your Minecraft server .jar file (e.g., 'server.jar') inside the 'minecraft' directory.
+
+5.  **Run the Bridge:** Start the server bridge by running:
+    \`\`\`
+    npm start
+    \`\`\`
+
+The manager backend will now be running. You can access the web interface in your browser (usually at http://localhost:3001) to manage your server.
+            `.trim();
+
+            archive.append(readmeContent, { name: 'README.md' });
+            archive.file('server.js', { name: 'server.js' });
+            archive.file('package.json', { name: 'package.json' });
+            archive.directory(path.join(__dirname, 'public/'), 'public');
+            
+            // Add an empty minecraft directory to guide the user
+            archive.append(null, { name: 'minecraft/' });
+
+            archive.finalize();
+        });
     }
 
     setupWebSocket() {
@@ -451,4 +498,3 @@ rcon.password=minecraft
 
 // Start the server
 new MinecraftServerManager();
-

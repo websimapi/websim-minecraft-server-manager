@@ -408,6 +408,10 @@ body {
     font-weight: 600;
 }
 
+.text-muted {
+    color: var(--text-muted);
+}
+
 .action-buttons {
     display: flex;
     gap: 12px;
@@ -796,4 +800,3 @@ body {
         padding: 16px;
     }
 }
-

@@ -104,6 +104,11 @@ class MinecraftServerManager {
         document.getElementById('saveSettingsBtn').addEventListener('click', () => {
             this.saveSettings();
         });
+
+        // Downloads
+        document.getElementById('downloadBridgeBtn').addEventListener('click', () => {
+            this.downloadBridge();
+        });
     }
 
     switchSection(sectionId) {
@@ -424,6 +429,13 @@ class MinecraftServerManager {
         
         this.sendWebSocketMessage({ type: 'settings', settings });
         this.showToast('Settings saved', 'success');
+    }
+
+    downloadBridge() {
+        this.showToast('Preparing download...', 'info');
+        /* @tweakable URL to download the server bridge from */
+        const downloadUrl = '/api/download-bridge';
+        window.location.href = downloadUrl;
     }
 
     showLoading() {
