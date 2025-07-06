@@ -263,6 +263,14 @@ body {
     color: var(--error-color);
     border-color: var(--error-color);
 }
+.btn-icon.warning {
+    color: var(--warning-color);
+    border-color: var(--warning-color);
+}
+.btn-icon.disconnected {
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
 
 .btn-primary {
     background: var(--primary-color);

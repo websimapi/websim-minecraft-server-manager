@@ -69,12 +69,17 @@ function bindEventListeners() {
 export function initialize(api) {
     apiHandler = api;
     bindEventListeners();
+    // Set initial button state to disconnected
+    updateConnectionStatus('disconnected');
 }
+
+/* @tweakable The duration of the flash animation on the connect button in milliseconds. */
+const flashDuration = 1000;
 
 export function updateConnectionStatus(status) {
     const connectBtn = document.getElementById('connectBtn');
     const icon = connectBtn.querySelector('i');
-    connectBtn.classList.remove('connecting', 'connected', 'error');
+    connectBtn.classList.remove('connecting', 'connected', 'error', 'warning', 'disconnected');
     icon.classList.remove('fa-spin');
 
     switch (status) {
@@ -92,10 +97,20 @@ export function updateConnectionStatus(status) {
             connectBtn.title = 'Connection Failed. Click to retry.';
             connectBtn.classList.add('error');
             icon.className = 'fas fa-exclamation-triangle';
+            // Flash red, then return to disconnected state
+            setTimeout(() => updateConnectionStatus('disconnected'), flashDuration);
             break;
+        case 'success-flash':
+             connectBtn.title = 'Success!';
+             connectBtn.classList.add('warning'); // Using warning for orange color
+             icon.className = 'fas fa-check-circle';
+             // After flash, transition to permanent green 'connected' state
+             setTimeout(() => updateConnectionStatus('connected'), flashDuration);
+             break;
         case 'disconnected':
         default:
             connectBtn.title = 'Connect to Server Bridge';
+            connectBtn.classList.add('disconnected');
             icon.className = 'fas fa-unlink';
             break;
     }

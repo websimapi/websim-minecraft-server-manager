@@ -41,7 +41,11 @@ function attemptInitialConnection(attempt = 1) {
     }
     console.log(`Attempting to connect... (${attempt}/${initialConnectAttempts})`);
     connectWebSocket(messageHandler, false, (success) => {
-        if (!success) {
+        if (!success && attempt >= initialConnectAttempts) {
+            // This is the final failure after all retries
+            ui.updateConnectionStatus('error');
+        } else if (!success) {
+            // Retry logic
             setTimeout(() => attemptInitialConnection(attempt + 1), initialConnectInterval);
         }
     });
@@ -63,7 +67,8 @@ export function connectWebSocket(handler, isReconnect = false, callback) {
             state.setConnected(true);
             state.resetReconnectAttempts();
             ui.showToast('Connected to server bridge', 'success');
-            ui.updateConnectionStatus('connected');
+            // Flash orange, then turn green
+            ui.updateConnectionStatus('success-flash');
             if (callback) callback(true);
         };
 
@@ -80,9 +85,9 @@ export function connectWebSocket(handler, isReconnect = false, callback) {
             console.log('WebSocket disconnected');
             const wasConnected = state.get().isConnected;
             state.setConnected(false);
-            ui.updateConnectionStatus('disconnected');
-
-            if (wasConnected) { // Only auto-reconnect if connection was previously established
+            
+            if (wasConnected) { // Only show error and attempt reconnect if connection was previously established
+                ui.updateConnectionStatus('error');
                 attemptReconnect();
             } else if (callback) { // For initial connection failures
                 callback(false);
