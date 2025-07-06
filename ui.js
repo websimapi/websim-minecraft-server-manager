@@ -46,13 +46,6 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
-
-    document.getElementById('eulaAcceptBtn').addEventListener('click', () => {
-        apiHandler.acceptEula();
-        hideEulaModal();
-        setTimeout(() => apiHandler.startServer(), 500); // Give a moment for EULA to be set
-    });
-    document.getElementById('eulaDeclineBtn').addEventListener('click', hideEulaModal);
 }
 
 export function initialize(api) {
@@ -161,12 +154,4 @@ export function showToast(message, type = 'info') {
     toast.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 5000);
-}
-
-export function showEulaModal() {
-    document.getElementById('eulaModalOverlay').classList.remove('hidden');
-}
-
-export function hideEulaModal() {
-    document.getElementById('eulaModalOverlay').classList.add('hidden');
 }

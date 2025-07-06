@@ -34,11 +34,6 @@ export function saveWorld() {
     ui.showToast('Saving world...', 'info');
 }
 
-export function acceptEula() {
-    sendWebSocketMessage({ type: 'accept_eula' });
-    ui.showToast('Accepting EULA...', 'info');
-}
-
 export function createBackup() {
     ui.showLoading();
     sendWebSocketMessage({ type: 'backup' });
