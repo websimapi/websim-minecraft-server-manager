@@ -40,11 +40,22 @@ class MinecraftAdapter {
                 if (!fs.existsSync(serverExecutablePath)) {
                     throw new Error(`Server JAR (${this.config.serverJar}) not found! Please check settings.`);
                 }
-                javaArgs = [`-Xmx${this.config.maxRam}`, `-Xms${this.config.maxRam}`];
-                if (this.config.serverType === 'java' && this.config.serverJar.toLowerCase().includes('paper') && disablePaperPluginRemapper) {
-                    javaArgs.push('-Dpaper.use-legacy-plugin-loading=true');
+                /* @tweakable Java Virtual Machine arguments for starting the server. */
+                const jvmArgs = [
+                    `-Xmx${this.config.maxRam}`,
+                    `-Xms${this.config.maxRam}`
+                ];
+                
+                if (this.config.serverJar.toLowerCase().includes('paper') && disablePaperPluginRemapper) {
+                    jvmArgs.push('-Dpaper.use-legacy-plugin-loading=true');
                 }
-                javaArgs.push('-jar', this.config.serverJar, 'nogui');
+
+                javaArgs = [
+                    ...jvmArgs,
+                    '-jar',
+                    this.config.serverJar,
+                    'nogui'
+                ];
             } else if (this.config.serverType === 'bedrock') {
                 serverExecutablePath = path.join(this.config.minecraftDir, this.config.bedrockServerExecutable);
                 if (!fs.existsSync(serverExecutablePath)) {
