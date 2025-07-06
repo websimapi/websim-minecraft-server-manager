@@ -1,6 +1,3 @@
-const fs   = require('fs');
-const path = require('path');
-
 module.exports.parseServerOutput = function(output) {
     const lines = output.split('\n');
     lines.forEach(line => {
@@ -27,10 +24,6 @@ module.exports.parseServerOutput = function(output) {
                 this.stats.tps = match[1];
             }
         }
-        // trigger TPS file‐based analysis when profiling stops
-        if (line.includes('Debug profiling stopped')) {
-            this.analyzeTPS();
-        }
     });
     this.stats.players = this.players.length;
     if (this.startTime) {
@@ -49,44 +42,4 @@ module.exports.formatUptime = function(milliseconds) {
     const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
     const seconds = (totalSeconds % 60).toString().padStart(2, '0');
     return `${hours}:${minutes}:${seconds}`;
-};
-
-// New: send debug commands to collect profiling data, then let parseServerOutput trigger file‐based analysis on stop
-module.exports.runTPSProfiling = function() {
-    if (!this.minecraftProcess) {
-        this.broadcast({ type: 'error', message: 'Server is not running. Cannot run TPS analysis.', level: 'error' });
-        return;
-    }
-    this.sendCommand('/debug start');
-    this.broadcast({ type: 'notification', message: 'Started TPS debug profiling for 20 seconds...', level: 'info' });
-    setTimeout(() => {
-        this.sendCommand('/debug stop');
-    }, 20000);
-};
-
-/**
- * Read debug-profiling.txt and estimate TPS from average ms-per-tick.
- */
-module.exports.analyzeTPS = function() {
-    const profilePath = path.join(this.config.minecraftDir, 'debug-profiling.txt');
-    if (!fs.existsSync(profilePath)) {
-        this.broadcast({ type: 'notification', message: 'No debug-profiling.txt found for TPS analysis.', level: 'warning' });
-        return;
-    }
-    try {
-        const content = fs.readFileSync(profilePath, 'utf8');
-        const msMatches = content.match(/([\d.]+)\s*ms/g);
-        if (!msMatches || !msMatches.length) {
-            this.broadcast({ type: 'notification', message: 'No timing data found in debug-profiling.txt.', level: 'error' });
-            return;
-        }
-        const values = msMatches.map(m => parseFloat(m));
-        const avgMs  = values.reduce((a,b) => a + b, 0) / values.length;
-        const tps    = (1000 / avgMs).toFixed(2);
-        this.stats.tps = tps;
-        this.broadcast({ type: 'status', online: this.serverStatus === 'online', stats: this.stats });
-        this.broadcast({ type: 'notification', message: `TPS analysis complete: ${tps}`, level: 'success' });
-    } catch (err) {
-        this.broadcast({ type: 'notification', message: `Failed to analyze TPS: ${err.message}`, level: 'error' });
-    }
 };

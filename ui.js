@@ -46,7 +46,6 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
-    document.getElementById('analyzeTPSBtn').addEventListener('click', () => apiHandler.analyzeTPS());
 
     const geyserCheck = document.getElementById('enableGeyserCheck');
     const floodgateGroup = document.getElementById('floodgateGroup');
@@ -101,8 +100,28 @@ export function updateServerStatus(online, stats = {}) {
         startStopBtn.className = 'btn btn-primary';
     }
 
+    // Players count
     document.getElementById('playerCount').textContent = stats.players ?? '0';
-    document.getElementById('uptime').textContent = stats.uptime ?? '00:00:00';
+    // Uptime calculation using stored start timestamp
+    let uptimeDisplay = '00:00:00';
+    if (online) {
+        const stored = localStorage.getItem('serverStartTime');
+        if (stored) {
+            const diffMs = Date.now() - parseInt(stored, 10);
+            const totalSeconds = Math.floor(diffMs / 1000);
+            const hours   = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            uptimeDisplay = `${hours}:${minutes}:${seconds}`;
+        } else if (stats.uptime) {
+            uptimeDisplay = stats.uptime;
+        }
+    } else {
+        // Reset stored uptime when server is offline
+        localStorage.removeItem('serverStartTime');
+    }
+    document.getElementById('uptime').textContent = uptimeDisplay;
+    // RAM usage and TPS
     document.getElementById('ramUsage').textContent = stats.ram ?? '0 MB';
     document.getElementById('tps').textContent = stats.tps ?? '20.0';
 }
