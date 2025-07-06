@@ -423,18 +423,21 @@ enable-rcon=false
         }, 10000);
     }
 
-    restartMinecraftServer() {
+    async restartMinecraftServer() {
         if (this.minecraftProcess) {
             this.broadcastMessage({
                 type: 'notification',
                 message: 'Restarting server...',
                 level: 'info'
             });
+
+            /** @tweakable Delay in milliseconds before attempting a restart after shutdown. */
+            const restartDelay = 2000;
             
             this.minecraftProcess.on('exit', () => {
                 setTimeout(() => {
                     this.startMinecraftServer();
-                }, 2000);
+                }, restartDelay);
             });
             
             this.stopMinecraftServer();
