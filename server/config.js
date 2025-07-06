@@ -46,7 +46,7 @@ const downloadConfig = {
     geyser: {
         /* @tweakable URL for Geyser plugin download. It's recommended to use the official API endpoint. */
         downloadUrl: 'https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot',
-        /* @tweakable Filename for the downloaded Geyser plugin JAR. */
+        /* @tweakable Filename for the downloaded Geyser plugin JAR. Must match the target server type (e.g., spigot). */
         filename: 'Geyser-Spigot.jar'
     },
     /* @tweakable Floodgate download settings */

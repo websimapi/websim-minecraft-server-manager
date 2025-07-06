@@ -1,10 +1,10 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 const { pipeline } = require('stream');
 const { promisify } = require('util');
 const archiver = require('archiver');
+const fetch = require('node-fetch');
 const { serverConfig, downloadConfig, backupCompressionLevel, geyserServerType, disablePaperPluginRemapper } = require('./config.js');
 
 class MinecraftAdapter {
@@ -71,6 +71,11 @@ class MinecraftAdapter {
         this.startTime = Date.now();
         this.broadcast({ type: 'status', online: true, stats: this.stats });
         this.broadcast({ type: 'notification', message: 'Server started successfully', level: 'success' });
+
+        // After starting, configure Geyser if needed
+        if (this.config.enableGeyser) {
+            setTimeout(() => this.configureGeyser(), 5000); // Wait a bit for files to generate
+        }
     }
 
     setupProcessEventListeners() {
@@ -230,9 +235,9 @@ class MinecraftAdapter {
 
         if (this.config.enableGeyser) {
             await this.downloadGeyserPlugin();
-        }
-        if (this.config.enableFloodgate) {
-            await this.downloadFloodgatePlugin();
+            if (this.config.enableFloodgate) {
+                await this.downloadFloodgatePlugin();
+            }
         }
     }
 
@@ -253,41 +258,25 @@ class MinecraftAdapter {
         }
     }
     
-    async downloadFile(url, dest, redirectCount = 0) {
-        if (redirectCount > 10) {
-            throw new Error('Too many redirects');
+    async downloadFile(url, dest) {
+        this.broadcast({ type: 'notification', message: `Downloading ${path.basename(dest)}...`, level: 'info' });
+        try {
+            const response = await fetch(url, { redirect: 'follow' });
+            if (!response.ok) {
+                throw new Error(`Failed to download file: Status Code ${response.status} ${response.statusText}`);
+            }
+            const fileStream = fs.createWriteStream(dest);
+            const streamPipeline = promisify(pipeline);
+            await streamPipeline(response.body, fileStream);
+            this.broadcast({ type: 'notification', message: `Successfully downloaded ${path.basename(dest)}.`, level: 'success' });
+            return dest;
+        } catch (error) {
+            this.broadcast({ type: 'error', message: `Download failed for ${path.basename(dest)}: ${error.message}` });
+            if (fs.existsSync(dest)) {
+                fs.unlinkSync(dest); // Clean up partial file
+            }
+            throw error;
         }
-
-        return new Promise((resolve, reject) => {
-            https.get(url, (response) => {
-                if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-                    // Handle redirect
-                    this.downloadFile(response.headers.location, dest, redirectCount + 1)
-                        .then(resolve)
-                        .catch(reject);
-                    return;
-                }
-
-                if (response.statusCode !== 200) {
-                    // Clean up failed download
-                    response.resume(); // Consume response data to free up memory
-                    fs.unlink(dest, () => reject(new Error(`Failed to download file: Status Code ${response.statusCode}`)));
-                    return;
-                }
-
-                const file = fs.createWriteStream(dest);
-                pipeline(response, file, (err) => {
-                    file.close();
-                    if (err) {
-                        fs.unlink(dest, () => reject(err)); // Clean up on error
-                    } else {
-                        resolve(dest);
-                    }
-                });
-            }).on('error', (err) => {
-                fs.unlink(dest, () => reject(err)); // Clean up on error
-            });
-        });
     }
 
     async downloadVanillaServer() {
@@ -335,7 +324,6 @@ class MinecraftAdapter {
             const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
             
             await this.downloadFile(downloadUrl, serverJarPath);
-            this.broadcast({ type: 'notification', message: `Downloaded ${this.config.serverJar} successfully.`, level: 'success' });
             return serverJarPath;
         } catch (error) {
             console.error('Failed to download PaperMC server:', error);
@@ -348,13 +336,10 @@ class MinecraftAdapter {
         const pluginsDir = path.join(this.config.minecraftDir, 'plugins');
         const geyserJarPath = path.join(pluginsDir, this.downloadConfig.geyser.filename);
         if (fs.existsSync(geyserJarPath)) {
-            this.broadcast({ type: 'notification', message: 'Geyser already downloaded.', level: 'info' });
             return;
         }
         try {
-            this.broadcast({ type: 'notification', message: 'Downloading Geyser plugin...', level: 'info' });
             await this.downloadFile(this.downloadConfig.geyser.downloadUrl, geyserJarPath);
-            this.broadcast({ type: 'notification', message: 'Geyser downloaded successfully.', level: 'success' });
         } catch (error) {
             console.error('Failed to download Geyser plugin:', error);
             this.broadcast({ type: 'error', message: `Failed to download Geyser: ${error.message}` });
@@ -365,13 +350,10 @@ class MinecraftAdapter {
         const pluginsDir = path.join(this.config.minecraftDir, 'plugins');
         const floodgateJarPath = path.join(pluginsDir, this.downloadConfig.floodgate.filename);
         if (fs.existsSync(floodgateJarPath)) {
-            this.broadcast({ type: 'notification', message: 'Floodgate already downloaded.', level: 'info' });
             return;
         }
         try {
-            this.broadcast({ type: 'notification', message: 'Downloading Floodgate plugin...', level: 'info' });
             await this.downloadFile(this.downloadConfig.floodgate.downloadUrl, floodgateJarPath);
-            this.broadcast({ type: 'notification', message: 'Floodgate downloaded successfully.', level: 'success' });
         } catch (error) {
             console.error('Failed to download Floodgate plugin:', error);
             this.broadcast({ type: 'error', message: `Failed to download Floodgate: ${error.message}` });
@@ -381,6 +363,62 @@ class MinecraftAdapter {
     async downloadBedrockServer() {
         this.broadcast({ type: 'notification', message: 'Bedrock server download is not implemented yet.', level: 'warning' });
         throw new Error('Bedrock server download is not implemented.');
+    }
+
+    /**
+     * @description Automatically configures Geyser's config.yml to use Floodgate.
+     * This is called after the server has started to ensure the config file exists.
+     */
+    configureGeyser() {
+        if (!this.config.enableGeyser || !this.config.enableFloodgate) return;
+
+        const geyserConfigPath = path.join(this.config.minecraftDir, 'plugins', 'Geyser-Spigot', 'config.yml');
+
+        if (!fs.existsSync(geyserConfigPath)) {
+            this.broadcast({
+                type: 'notification',
+                message: 'Geyser config not found. Waiting for it to be generated.',
+                level: 'warning'
+            });
+            return;
+        }
+
+        try {
+            let configContent = fs.readFileSync(geyserConfigPath, 'utf8');
+
+            /* @tweakable The auth type to set in Geyser's config. Should be 'floodgate' for Bedrock account support. */
+            const targetAuthType = 'floodgate';
+            const authTypeRegex = /auth-type:\s*\w+/;
+
+            if (configContent.match(/auth-type:\s*floodgate/)) {
+                // Already configured
+                return;
+            }
+
+            if (authTypeRegex.test(configContent)) {
+                configContent = configContent.replace(authTypeRegex, `auth-type: ${targetAuthType}`);
+            } else {
+                this.broadcast({
+                    type: 'error',
+                    message: 'Could not find "auth-type" in Geyser config.'
+                });
+                return;
+            }
+
+            fs.writeFileSync(geyserConfigPath, configContent, 'utf8');
+            this.broadcast({
+                type: 'notification',
+                message: 'Geyser config updated for Floodgate. A server restart is recommended.',
+                level: 'success'
+            });
+
+        } catch (error) {
+            console.error(`Failed to configure Geyser: ${error}`);
+            this.broadcast({
+                type: 'error',
+                message: `Failed to auto-configure Geyser: ${error.message}`
+            });
+        }
     }
 }
 
