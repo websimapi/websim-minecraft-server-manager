@@ -3,6 +3,15 @@ import * as ui from './ui.js';
 import * as state from './state.js';
 import { zipFilename } from './config.js';
 
+export function connect() {
+    if (window.app && typeof window.app.connect === 'function') {
+        window.app.connect();
+    } else {
+        console.error("Connection function not available.");
+        ui.showToast("Initialization error. Please refresh.", "error");
+    }
+}
+
 export function toggleServer() {
     if (state.get().serverStatus === 'online') {
         stopServer();

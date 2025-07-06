@@ -4,6 +4,7 @@ let state = {
     autoScroll: true,
     players: [],
     reconnectAttempts: 0,
+    lastHeartbeat: 0,
 };
 
 export function get() {
@@ -16,6 +17,10 @@ export function set(newState) {
 
 export function setConnected(status) {
     state.isConnected = status;
+}
+
+export function setLastHeartbeat(timestamp) {
+    state.lastHeartbeat = timestamp;
 }
 
 export function setServerStatus(status) {
@@ -38,4 +43,3 @@ export function resetReconnectAttempts() {
 export function incrementReconnectAttempts() {
     state.reconnectAttempts++;
 }
-

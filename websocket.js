@@ -5,26 +5,55 @@ import * as ui from './ui.js';
 let socket = null;
 let messageHandler = () => {};
 
+/* @tweakable [Number of reconnection attempts before stopping] */
+const initialConnectAttempts = 3;
+/* @tweakable [Delay in ms between initial connection attempts] */
+const initialConnectInterval = 2000;
+
 export function sendWebSocketMessage(message) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(message));
     } else {
-        ui.showToast('Not connected to server', 'error');
+        if (message.type !== 'ping') { // Don't show toast for background pings on a disconnected client
+            ui.showToast('Not connected to server', 'error');
+        }
     }
 }
 
 function attemptReconnect() {
     if (state.get().reconnectAttempts < maxReconnectAttempts) {
         state.incrementReconnectAttempts();
-        console.log(`Attempting to reconnect... (${state.get().reconnectAttempts}/${maxReconnectAttempts})`);
-        setTimeout(() => connectWebSocket(messageHandler), reconnectInterval);
+        console.log(`Connection lost. Attempting to reconnect... (${state.get().reconnectAttempts}/${maxReconnectAttempts})`);
+        setTimeout(() => connectWebSocket(messageHandler, true), reconnectInterval);
     } else {
-        ui.showToast('Failed to connect to server after multiple attempts.', 'error');
+        ui.showToast('Lost connection to server. Please reconnect manually.', 'error');
+        ui.updateConnectionStatus('error');
         console.error('Max reconnection attempts reached.');
     }
 }
 
-export function connectWebSocket(handler) {
+function attemptInitialConnection(attempt = 1) {
+    if (attempt > initialConnectAttempts) {
+        ui.showToast('Failed to connect to the server bridge.', 'error');
+        ui.updateConnectionStatus('error');
+        console.error('Initial connection failed after multiple attempts.');
+        return;
+    }
+    console.log(`Attempting to connect... (${attempt}/${initialConnectAttempts})`);
+    connectWebSocket(messageHandler, false, (success) => {
+        if (!success) {
+            setTimeout(() => attemptInitialConnection(attempt + 1), initialConnectInterval);
+        }
+    });
+}
+
+export function connect(handler) {
+    messageHandler = handler;
+    ui.updateConnectionStatus('connecting');
+    attemptInitialConnection();
+}
+
+export function connectWebSocket(handler, isReconnect = false, callback) {
     messageHandler = handler;
     try {
         socket = new WebSocket(wsUrl);
@@ -34,6 +63,8 @@ export function connectWebSocket(handler) {
             state.setConnected(true);
             state.resetReconnectAttempts();
             ui.showToast('Connected to server bridge', 'success');
+            ui.updateConnectionStatus('connected');
+            if (callback) callback(true);
         };
 
         socket.onmessage = (event) => {
@@ -47,18 +78,32 @@ export function connectWebSocket(handler) {
 
         socket.onclose = () => {
             console.log('WebSocket disconnected');
+            const wasConnected = state.get().isConnected;
             state.setConnected(false);
-            ui.updateServerStatus(false); // Visually indicate disconnection
-            attemptReconnect();
+            ui.updateConnectionStatus('disconnected');
+
+            if (wasConnected) { // Only auto-reconnect if connection was previously established
+                attemptReconnect();
+            } else if (callback) { // For initial connection failures
+                callback(false);
+            }
         };
 
         socket.onerror = (error) => {
             console.error('WebSocket error:', error);
-            ui.showToast('Connection error', 'error');
-            // onclose will be called next, triggering reconnect logic
+            if (!isReconnect) {
+                 // Don't show toast on initial connect error, onclose will trigger retry or failure message.
+            } else {
+                ui.showToast('Connection error', 'error');
+            }
+            // onclose will be called next
         };
     } catch (error) {
         console.error('Failed to create WebSocket:', error);
-        attemptReconnect();
+        if (callback) callback(false);
+
+        if (isReconnect) {
+            attemptReconnect();
+        }
     }
 }

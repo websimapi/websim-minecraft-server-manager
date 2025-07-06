@@ -24,6 +24,7 @@ function bindEventListeners() {
         });
     });
 
+    document.getElementById('connectBtn').addEventListener('click', () => apiHandler.connect());
     document.getElementById('startStopBtn').addEventListener('click', () => apiHandler.toggleServer());
     document.getElementById('restartBtn').addEventListener('click', () => apiHandler.restartServer());
     document.getElementById('saveWorldBtn').addEventListener('click', () => apiHandler.saveWorld());
@@ -68,6 +69,36 @@ function bindEventListeners() {
 export function initialize(api) {
     apiHandler = api;
     bindEventListeners();
+}
+
+export function updateConnectionStatus(status) {
+    const connectBtn = document.getElementById('connectBtn');
+    const icon = connectBtn.querySelector('i');
+    connectBtn.classList.remove('connecting', 'connected', 'error');
+    icon.classList.remove('fa-spin');
+
+    switch (status) {
+        case 'connecting':
+            connectBtn.title = 'Connecting...';
+            connectBtn.classList.add('connecting');
+            icon.className = 'fas fa-sync-alt fa-spin';
+            break;
+        case 'connected':
+            connectBtn.title = 'Connected';
+            connectBtn.classList.add('connected');
+            icon.className = 'fas fa-link';
+            break;
+        case 'error':
+            connectBtn.title = 'Connection Failed. Click to retry.';
+            connectBtn.classList.add('error');
+            icon.className = 'fas fa-exclamation-triangle';
+            break;
+        case 'disconnected':
+        default:
+            connectBtn.title = 'Connect to Server Bridge';
+            icon.className = 'fas fa-unlink';
+            break;
+    }
 }
 
 export function updateServerStatus(online, stats = {}) {
