@@ -53,6 +53,7 @@ function handleClientMessage(serverInstance, ws, data) {
             break;
         case 'settings':
             serverInstance.minecraft.updateSettings(data.settings);
+            // The adapter will broadcast a success message.
             break;
         case 'ping':
             serverInstance.sendToClient(ws, { type: 'pong' });

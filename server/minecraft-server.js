@@ -24,6 +24,7 @@ class MinecraftServer {
         setupExpress(this);
         setupWebSocket(this);
         
+        // Use the config from the instance, not the imported one
         if (this.config.autoStart) {
             setTimeout(() => this.minecraft.start(), 2000);
         }
