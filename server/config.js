@@ -58,9 +58,6 @@ const downloadConfig = {
     }
 };
 
-// Embed download config into server config for easier passing
-serverConfig.downloadConfig = downloadConfig;
-
 /** @tweakable The server software to use when Geyser is enabled. Must be a plugin-compatible server like 'paper'. */
 const geyserServerType = 'paper';
 

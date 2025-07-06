@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
+const { serverConfig } = require('./config.js');
 const { setupExpress } = require('./http.js');
 const { setupWebSocket } = require('./websocket.js');
 const MinecraftAdapter = require('./minecraft-adapter.js');
@@ -9,7 +10,7 @@ const MinecraftAdapter = require('./minecraft-adapter.js');
 class MinecraftServer {
     constructor() {
         this.app = express();
-        this.config = require('./config.js').serverConfig;
+        this.config = serverConfig;
         this.httpServer = null;
         this.wss = null;
         
