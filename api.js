@@ -1,16 +1,7 @@
-import { sendWebSocketMessage } from './websocket.js';
+import { connectWebSocket, sendWebSocketMessage } from './websocket.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import { zipFilename } from './config.js';
-
-export function connect() {
-    if (window.app && typeof window.app.connect === 'function') {
-        window.app.connect();
-    } else {
-        console.error("Connection function not available.");
-        ui.showToast("Initialization error. Please refresh.", "error");
-    }
-}
 
 export function toggleServer() {
     if (state.get().serverStatus === 'online') {
@@ -113,7 +104,7 @@ export function uploadFile(file) {
 }
 
 export function saveSettings() {
-    const settings = {
+    const serverSettings = {
         serverType: document.getElementById('serverTypeSelect').value,
         maxPlayers: parseInt(document.getElementById('maxPlayersInput').value, 10),
         port: parseInt(document.getElementById('portInput').value, 10),
@@ -123,8 +114,13 @@ export function saveSettings() {
         enableFloodgate: document.getElementById('enableFloodgateCheck').checked
     };
 
-    sendWebSocketMessage({ type: 'settings', settings });
-    ui.showToast('Settings saved. A server restart is required for changes to take effect.', 'info');
+    // Save client-side settings
+    const autoReconnect = document.getElementById('autoReconnectCheck').checked;
+    state.setAutoReconnect(autoReconnect);
+
+    // Send server-side settings to the bridge
+    sendWebSocketMessage({ type: 'settings', settings: serverSettings });
+    ui.showToast('Settings saved. A server restart may be required for some changes to take effect.', 'info');
 }
 
 export function downloadBridge() {
@@ -190,4 +186,13 @@ The manager backend will run on port 3001. Use the web UI to connect.
 
 export function ping() {
     sendWebSocketMessage({ type: 'ping' });
+}
+
+export function connectManually() {
+    if (!state.get().isConnected) {
+        ui.showToast('Attempting to connect to bridge...', 'info');
+        connectWebSocket();
+    } else {
+        ui.showToast('Already connected.', 'info');
+    }
 }

@@ -171,6 +171,22 @@ body {
     margin: 0;
 }
 
+.connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 8px;
+    transition: all var(--transition-speed) ease;
+}
+
+.connection-status:hover {
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
 .server-status {
     display: flex;
     align-items: center;
@@ -234,42 +250,6 @@ body {
 
 .btn:hover::before {
     left: 100%;
-}
-
-.btn-icon {
-    padding: 12px;
-    font-size: 1rem;
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
-}
-
-.btn-icon:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px var(--shadow-color);
-}
-
-.btn-icon.connecting {
-    color: var(--warning-color);
-    border-color: var(--warning-color);
-}
-.btn-icon.connected {
-    color: var(--success-color);
-    border-color: var(--success-color);
-}
-.btn-icon.error {
-    color: var(--error-color);
-    border-color: var(--error-color);
-}
-.btn-icon.warning {
-    color: var(--warning-color);
-    border-color: var(--warning-color);
-}
-.btn-icon.disconnected {
-    color: var(--text-secondary);
-    border-color: var(--border-color);
 }
 
 .btn-primary {
@@ -702,6 +682,14 @@ body {
     width: 20px;
     height: 20px;
     accent-color: var(--primary-color);
+}
+
+.form-group-checkbox {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
 }
 
 /* Loading Overlay */

@@ -28,9 +28,6 @@ function handleWebSocketMessage(data) {
             ui.showToast(data.message, 'error');
             ui.hideLoading();
             break;
-        case 'pong': // Handle heartbeat response
-            state.setLastHeartbeat(Date.now());
-            break;
         default:
             console.log('Unknown message type:', data.type);
     }
@@ -46,14 +43,16 @@ function startPeriodicUpdates() {
 
 function initialize() {
     ui.initialize(api);
+    state.loadClientSettings(); // Load settings from localStorage
+    ui.applyClientSettings(); // Update UI with loaded settings
     ui.updateServerStatus(false);
+    if (state.get().autoReconnect) {
+        connectWebSocket(handleWebSocketMessage);
+    } else {
+        ui.updateConnectionStatus(false);
+    }
     startPeriodicUpdates();
 }
-
-// Expose connect function to be called from UI/API layers
-window.app = {
-    connect: () => connectWebSocket(handleWebSocketMessage)
-};
 
 document.addEventListener('DOMContentLoaded', initialize);
 

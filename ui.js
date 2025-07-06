@@ -24,7 +24,6 @@ function bindEventListeners() {
         });
     });
 
-    document.getElementById('connectBtn').addEventListener('click', () => apiHandler.connect());
     document.getElementById('startStopBtn').addEventListener('click', () => apiHandler.toggleServer());
     document.getElementById('restartBtn').addEventListener('click', () => apiHandler.restartServer());
     document.getElementById('saveWorldBtn').addEventListener('click', () => apiHandler.saveWorld());
@@ -47,6 +46,7 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
+    document.getElementById('connectionStatus').addEventListener('click', () => apiHandler.connectManually());
 
     const geyserCheck = document.getElementById('enableGeyserCheck');
     const floodgateGroup = document.getElementById('floodgateGroup');
@@ -69,51 +69,6 @@ function bindEventListeners() {
 export function initialize(api) {
     apiHandler = api;
     bindEventListeners();
-    // Set initial button state to disconnected
-    updateConnectionStatus('disconnected');
-}
-
-/* @tweakable The duration of the flash animation on the connect button in milliseconds. */
-const flashDuration = 1000;
-
-export function updateConnectionStatus(status) {
-    const connectBtn = document.getElementById('connectBtn');
-    const icon = connectBtn.querySelector('i');
-    connectBtn.classList.remove('connecting', 'connected', 'error', 'warning', 'disconnected');
-    icon.classList.remove('fa-spin');
-
-    switch (status) {
-        case 'connecting':
-            connectBtn.title = 'Connecting...';
-            connectBtn.classList.add('connecting');
-            icon.className = 'fas fa-sync-alt fa-spin';
-            break;
-        case 'connected':
-            connectBtn.title = 'Connected';
-            connectBtn.classList.add('connected');
-            icon.className = 'fas fa-link';
-            break;
-        case 'error':
-            connectBtn.title = 'Connection Failed. Click to retry.';
-            connectBtn.classList.add('error');
-            icon.className = 'fas fa-exclamation-triangle';
-            // Flash red, then return to disconnected state
-            setTimeout(() => updateConnectionStatus('disconnected'), flashDuration);
-            break;
-        case 'success-flash':
-             connectBtn.title = 'Success!';
-             connectBtn.classList.add('warning'); // Using warning for orange color
-             icon.className = 'fas fa-check-circle';
-             // After flash, transition to permanent green 'connected' state
-             setTimeout(() => updateConnectionStatus('connected'), flashDuration);
-             break;
-        case 'disconnected':
-        default:
-            connectBtn.title = 'Connect to Server Bridge';
-            connectBtn.classList.add('disconnected');
-            icon.className = 'fas fa-unlink';
-            break;
-    }
 }
 
 export function updateServerStatus(online, stats = {}) {
@@ -137,6 +92,28 @@ export function updateServerStatus(online, stats = {}) {
     document.getElementById('uptime').textContent = stats.uptime ?? '00:00:00';
     document.getElementById('ramUsage').textContent = stats.ram ?? '0 MB';
     document.getElementById('tps').textContent = stats.tps ?? '20.0';
+}
+
+export function updateConnectionStatus(connected, connecting = false) {
+    const icon = document.getElementById('connectionIcon');
+    const container = document.getElementById('connectionStatus');
+
+    icon.classList.remove('fa-link', 'fa-unlink', 'fa-spin');
+
+    if (connecting) {
+        icon.classList.add('fa-link', 'fa-spin');
+        container.title = 'Connecting to bridge...';
+    } else if (connected) {
+        icon.classList.add('fa-link');
+        container.title = 'Connected to bridge.';
+    } else {
+        icon.classList.add('fa-unlink');
+        container.title = 'Disconnected from bridge. Click to connect.';
+    }
+}
+
+export function applyClientSettings() {
+    document.getElementById('autoReconnectCheck').checked = state.get().autoReconnect;
 }
 
 export function updatePlayersList(players) {
