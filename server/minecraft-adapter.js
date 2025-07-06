@@ -5,7 +5,7 @@ const https = require('https');
 const { pipeline } = require('stream');
 const { promisify } = require('util');
 const archiver = require('archiver');
-const { serverConfig, downloadConfig, backupCompressionLevel, geyserServerType } = require('./config.js');
+const { serverConfig, downloadConfig, backupCompressionLevel, geyserServerType, disablePaperPluginRemapper } = require('./config.js');
 
 class MinecraftAdapter {
     constructor(broadcastCallback) {
@@ -40,7 +40,11 @@ class MinecraftAdapter {
                 if (!fs.existsSync(serverExecutablePath)) {
                     throw new Error(`Server JAR (${this.config.serverJar}) not found! Please check settings.`);
                 }
-                javaArgs = [`-Xmx${this.config.maxRam}`, `-Xms${this.config.maxRam}`, '-jar', this.config.serverJar, 'nogui'];
+                javaArgs = [`-Xmx${this.config.maxRam}`, `-Xms${this.config.maxRam}`];
+                if (this.config.serverType === 'java' && this.config.serverJar.toLowerCase().includes('paper') && disablePaperPluginRemapper) {
+                    javaArgs.push('-Dpaper.use-legacy-plugin-loading=true');
+                }
+                javaArgs.push('-jar', this.config.serverJar, 'nogui');
             } else if (this.config.serverType === 'bedrock') {
                 serverExecutablePath = path.join(this.config.minecraftDir, this.config.bedrockServerExecutable);
                 if (!fs.existsSync(serverExecutablePath)) {
@@ -265,7 +269,10 @@ class MinecraftAdapter {
                 }
 
                 if (response.statusCode !== 200) {
-                    return reject(new Error(`Failed to download file: Status Code ${response.statusCode}`));
+                    // Clean up failed download
+                    response.resume(); // Consume response data to free up memory
+                    fs.unlink(dest, () => reject(new Error(`Failed to download file: Status Code ${response.statusCode}`)));
+                    return;
                 }
 
                 const file = fs.createWriteStream(dest);
@@ -339,7 +346,7 @@ class MinecraftAdapter {
 
     async downloadGeyserPlugin() {
         const pluginsDir = path.join(this.config.minecraftDir, 'plugins');
-        const geyserJarPath = path.join(pluginsDir, 'Geyser-Spigot.jar');
+        const geyserJarPath = path.join(pluginsDir, this.downloadConfig.geyser.filename);
         if (fs.existsSync(geyserJarPath)) {
             this.broadcast({ type: 'notification', message: 'Geyser already downloaded.', level: 'info' });
             return;
@@ -356,7 +363,7 @@ class MinecraftAdapter {
 
     async downloadFloodgatePlugin() {
         const pluginsDir = path.join(this.config.minecraftDir, 'plugins');
-        const floodgateJarPath = path.join(pluginsDir, 'floodgate-spigot.jar');
+        const floodgateJarPath = path.join(pluginsDir, this.downloadConfig.floodgate.filename);
         if (fs.existsSync(floodgateJarPath)) {
             this.broadcast({ type: 'notification', message: 'Floodgate already downloaded.', level: 'info' });
             return;

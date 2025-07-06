@@ -44,23 +44,33 @@ const downloadConfig = {
     },
     /* @tweakable Geyser download settings */
     geyser: {
-        downloadUrl: 'https://ci.geysermc.org/job/GeyserMC/job/Geyser/job/master/lastSuccessfulBuild/artifact/bootstrap/spigot/target/Geyser-Spigot.jar'
+        /* @tweakable URL for Geyser plugin download. It's recommended to use the official API endpoint. */
+        downloadUrl: 'https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot',
+        /* @tweakable Filename for the downloaded Geyser plugin JAR. */
+        filename: 'Geyser-Spigot.jar'
     },
     /* @tweakable Floodgate download settings */
     floodgate: {
-        downloadUrl: 'https://ci.geysermc.org/job/GeyserMC/job/Floodgate/job/master/lastSuccessfulBuild/artifact/spigot/target/floodgate-spigot.jar'
+        /* @tweakable URL for Floodgate plugin download. It's recommended to use the official API endpoint. */
+        downloadUrl: 'https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot',
+        /* @tweakable Filename for the downloaded Floodgate plugin JAR. */
+        filename: 'floodgate-spigot.jar'
     }
 };
 
-/** @tweakable The server software to use when Geyser is enabled. Must be 'paper' to support plugins. */
+/** @tweakable The server software to use when Geyser is enabled. Must be a plugin-compatible server like 'paper'. */
 const geyserServerType = 'paper';
 
 /** @tweakable The compression level for zip backups (0-9). 9 is highest compression. */
 const backupCompressionLevel = 1; // Lowered for performance, 9 can be very slow
 
+/** @tweakable For Paper servers, this disables the plugin remapper which can sometimes cause issues with plugins like Geyser. */
+const disablePaperPluginRemapper = true;
+
 module.exports = {
     serverConfig,
     downloadConfig,
     backupCompressionLevel,
-    geyserServerType
+    geyserServerType,
+    disablePaperPluginRemapper
 };
