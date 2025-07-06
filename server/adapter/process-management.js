@@ -56,7 +56,7 @@ module.exports.start = async function() {
         setTimeout(() => this.configureGeyser(), 5000);
     }
 
-    // Monitor memory usage periodically (updates this.stats.ram)
+    // Monitor memory usage periodically
     if (this.statsUpdater) clearInterval(this.statsUpdater);
     this.statsUpdater = setInterval(async () => {
         if (this.minecraftProcess && this.minecraftProcess.pid) {
@@ -68,6 +68,29 @@ module.exports.start = async function() {
             }
         }
     }, 5000);
+
+    // Add debug profiling for TPS measurement
+    if (!this.debugInterval) {
+        this.debugInterval = setInterval(() => {
+            // Start the built-in server profiler
+            this.sendCommand('debug start');
+            // Stop profiling after 20 seconds
+            this.debugTimeout = setTimeout(() => {
+                this.sendCommand('debug stop');
+                // Give the server a moment to write the file, then read & broadcast it
+                setTimeout(() => {
+                    const debugFilePath = path.join(this.config.minecraftDir, 'debug-profiling.txt');
+                    fs.readFile(debugFilePath, 'utf8', (err, data) => {
+                        if (err) {
+                            this.broadcast({ type: 'console', message: `Failed to read debug file: ${err.message}` });
+                        } else {
+                            this.broadcast({ type: 'console', message: `Debug profiling data:\n${data}` });
+                        }
+                    });
+                }, 1000);
+            }, 20000);
+        }, 40000);
+    }
 };
 
 module.exports.setupProcessEventListeners = function() {
@@ -94,6 +117,17 @@ module.exports.setupProcessEventListeners = function() {
             clearInterval(this.statsUpdater);
             this.statsUpdater = null;
         }
+
+        // Stop debug profiling if running
+        if (this.debugInterval) {
+            clearInterval(this.debugInterval);
+            this.debugInterval = null;
+        }
+        if (this.debugTimeout) {
+            clearTimeout(this.debugTimeout);
+            this.debugTimeout = null;
+        }
+
         console.log(`Server process exited with code ${code}`);
         this.minecraftProcess = null;
         this.serverStatus = 'offline';
