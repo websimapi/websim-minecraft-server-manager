@@ -46,6 +46,7 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
+    document.getElementById('analyzeTPSBtn').addEventListener('click', () => apiHandler.analyzeTPS());
 
     const geyserCheck = document.getElementById('enableGeyserCheck');
     const floodgateGroup = document.getElementById('floodgateGroup');

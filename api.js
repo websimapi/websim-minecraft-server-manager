@@ -188,3 +188,8 @@ The manager backend will run on port 3001. Use the web UI to connect.
 export function ping() {
     sendWebSocketMessage({ type: 'ping' });
 }
+
+export function analyzeTPS() {
+    sendWebSocketMessage({ type: 'analyze-tps' });
+    ui.showToast('Analyzing TPS...', 'info');
+}
