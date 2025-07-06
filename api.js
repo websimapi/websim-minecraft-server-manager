@@ -147,7 +147,13 @@ The manager backend will run on port 3001. Use the web UI to connect.
         'server/http.js',
         'server/minecraft-adapter.js',
         'server/minecraft-server.js',
-        'server/websocket.js'
+        'server/websocket.js',
+        'server/adapter/backup.js',
+        'server/adapter/parser.js',
+        'server/adapter/preparation.js',
+        'server/adapter/downloader.js',
+        'server/adapter/settings.js',
+        'server/adapter/process-management.js'
     ];
 
     const fetchPromises = filesToFetch.map(file =>
