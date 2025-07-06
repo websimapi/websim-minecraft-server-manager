@@ -2,7 +2,6 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
-const { serverConfig } = require('./config.js');
 const { setupExpress } = require('./http.js');
 const { setupWebSocket } = require('./websocket.js');
 const MinecraftAdapter = require('./minecraft-adapter.js');
@@ -10,7 +9,7 @@ const MinecraftAdapter = require('./minecraft-adapter.js');
 class MinecraftServer {
     constructor() {
         this.app = express();
-        this.config = serverConfig;
+        this.config = require('./config.js').serverConfig;
         this.httpServer = null;
         this.wss = null;
         
@@ -24,7 +23,6 @@ class MinecraftServer {
         setupExpress(this);
         setupWebSocket(this);
         
-        // Use the config from the instance, not the imported one
         if (this.config.autoStart) {
             setTimeout(() => this.minecraft.start(), 2000);
         }
