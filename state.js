@@ -4,8 +4,8 @@ let state = {
     autoScroll: true,
     players: [],
     reconnectAttempts: 0,
-    /* @tweakable Default setting for auto-reconnecting the WebSocket */
-    autoReconnect: true,
+    /* @tweakable Default setting for auto-reconnecting the WebSocket on first visit. */
+    autoReconnect: false,
 };
 
 /* @tweakable The key used for storing client settings in localStorage. */
