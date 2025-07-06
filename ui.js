@@ -47,10 +47,16 @@ function bindEventListeners() {
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
 
+    // EULA Modal listeners
     document.getElementById('acceptEulaBtn').addEventListener('click', () => {
         apiHandler.acceptEula();
         hideEulaModal();
-        showLoading();
+    });
+    document.getElementById('declineEulaBtn').addEventListener('click', hideEulaModal);
+    document.getElementById('eulaModalOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'eulaModalOverlay') {
+            hideEulaModal();
+        }
     });
 }
 
@@ -147,6 +153,14 @@ export function hideLoading() {
     document.getElementById('loadingOverlay').classList.remove('active');
 }
 
+export function showEulaModal() {
+    document.getElementById('eulaModalOverlay').classList.remove('hidden');
+}
+
+export function hideEulaModal() {
+    document.getElementById('eulaModalOverlay').classList.add('hidden');
+}
+
 export function showToast(message, type = 'info') {
     const toastContainer = document.getElementById('toastContainer');
     const toast = document.createElement('div');
@@ -160,12 +174,4 @@ export function showToast(message, type = 'info') {
     toast.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 5000);
-}
-
-export function showEulaModal() {
-    document.getElementById('eulaModalOverlay').classList.remove('hidden');
-}
-
-export function hideEulaModal() {
-    document.getElementById('eulaModalOverlay').classList.add('hidden');
 }

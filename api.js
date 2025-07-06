@@ -78,7 +78,8 @@ export function opPlayer() {
 
 export function acceptEula() {
     sendWebSocketMessage({ type: 'accept_eula' });
-    ui.showToast('Accepting EULA...', 'info');
+    ui.showToast('EULA accepted. Attempting to start server...', 'info');
+    ui.showLoading();
 }
 
 export function uploadFile(file) {
