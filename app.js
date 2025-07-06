@@ -25,8 +25,8 @@ function handleWebSocketMessage(data) {
             }
             break;
         case 'eula_required':
-            ui.showEulaModal();
             ui.hideLoading();
+            ui.showEulaModal();
             break;
         case 'error':
             ui.showToast(data.message, 'error');

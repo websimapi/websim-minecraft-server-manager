@@ -34,6 +34,11 @@ export function saveWorld() {
     ui.showToast('Saving world...', 'info');
 }
 
+export function acceptEula() {
+    sendWebSocketMessage({ type: 'accept_eula' });
+    ui.showToast('Accepting EULA...', 'info');
+}
+
 export function createBackup() {
     ui.showLoading();
     sendWebSocketMessage({ type: 'backup' });
@@ -74,12 +79,6 @@ export function banPlayer() {
 
 export function opPlayer() {
     playerAction('op');
-}
-
-export function acceptEula() {
-    sendWebSocketMessage({ type: 'accept_eula' });
-    ui.showToast('EULA accepted. Attempting to start server...', 'info');
-    ui.showLoading();
 }
 
 export function uploadFile(file) {
