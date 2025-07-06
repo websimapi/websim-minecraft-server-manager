@@ -11,7 +11,8 @@ function setupWebSocket(serverInstance) {
         serverInstance.sendToClient(ws, {
             type: 'status',
             online: serverInstance.minecraft.serverStatus === 'online',
-            stats: serverInstance.minecraft.stats
+            stats: serverInstance.minecraft.stats,
+            players: serverInstance.minecraft.players
         });
 
         ws.on('message', (message) => {

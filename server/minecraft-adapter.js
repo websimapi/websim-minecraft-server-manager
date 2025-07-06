@@ -34,10 +34,8 @@ class MinecraftAdapter {
 
         try {
             if (this.config.serverType === 'java') {
+                await this.prepareJavaServer();
                 serverExecutablePath = path.join(this.config.minecraftDir, this.config.serverJar);
-                if (!fs.existsSync(serverExecutablePath)) {
-                    await this.downloadJavaServer();
-                }
                 javaArgs = [`-Xmx${this.config.maxRam}`, `-Xms${this.config.maxRam}`, '-jar', this.config.serverJar, 'nogui'];
             } else if (this.config.serverType === 'bedrock') {
                 serverExecutablePath = path.join(this.config.minecraftDir, this.config.bedrockServerExecutable);
@@ -191,10 +189,40 @@ class MinecraftAdapter {
         });
     }
 
+    async prepareJavaServer() {
+        const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
+        if (this.config.enableGeyser) {
+            this.broadcast({ type: 'notification', message: 'Geyser enabled, preparing PaperMC server...', level: 'info' });
+            if (!fs.existsSync(serverJarPath)) {
+                await this.downloadPaperServer();
+            }
+            await this.preparePlugins();
+        } else {
+            if (!fs.existsSync(serverJarPath)) {
+                await this.downloadVanillaServer();
+            }
+        }
+    }
+
+    async preparePlugins() {
+        const pluginsDir = path.join(this.config.minecraftDir, 'plugins');
+        if (!fs.existsSync(pluginsDir)) {
+            fs.mkdirSync(pluginsDir, { recursive: true });
+        }
+
+        if (this.config.enableGeyser) {
+            await this.downloadGeyserPlugin();
+        }
+        if (this.config.enableFloodgate) {
+            await this.downloadFloodgatePlugin();
+        }
+    }
+
     updateSettings(settings) {
         this.config = { ...this.config, ...settings };
+        fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(this.config, null, 2));
         if (settings.port || settings.maxPlayers) this.updateServerProperties(settings);
-        this.broadcast({ type: 'notification', message: 'Settings updated successfully', level: 'success' });
+        this.broadcast({ type: 'notification', message: 'Settings updated successfully. A restart is required for some changes to take effect.', level: 'success' });
     }
 
     updateServerProperties(settings) {
@@ -224,9 +252,9 @@ class MinecraftAdapter {
         });
     }
 
-    async downloadJavaServer() {
+    async downloadVanillaServer() {
         try {
-            this.broadcast({ type: 'notification', message: 'Downloading latest Java server...', level: 'info' });
+            this.broadcast({ type: 'notification', message: 'Downloading latest Vanilla Java server...', level: 'info' });
             const manifestResponse = await fetch(this.downloadConfig.java.versionManifestUrl);
             const manifest = await manifestResponse.json();
             const latestVersionId = manifest.latest[this.downloadConfig.java.latestVersionType];
@@ -241,9 +269,71 @@ class MinecraftAdapter {
             this.broadcast({ type: 'notification', message: `Downloaded ${this.config.serverJar} successfully.`, level: 'success' });
             return serverJarPath;
         } catch (error) {
-            console.error('Failed to download Java server:', error);
-            this.broadcast({ type: 'error', message: `Failed to download Java server: ${error.message}` });
+            console.error('Failed to download Vanilla Java server:', error);
+            this.broadcast({ type: 'error', message: `Failed to download Vanilla Java server: ${error.message}` });
             throw error;
+        }
+    }
+
+    async downloadPaperServer() {
+        try {
+            this.broadcast({ type: 'notification', message: 'Downloading latest PaperMC server...', level: 'info' });
+            const projectUrl = this.downloadConfig.paper.apiUrl;
+            const versionsResponse = await fetch(projectUrl);
+            const versionsData = await versionsResponse.json();
+            const latestVersion = versionsData.versions[versionsData.versions.length - 1];
+
+            const buildsResponse = await fetch(`${projectUrl}/versions/${latestVersion}`);
+            const buildsData = await buildsResponse.json();
+            const latestBuild = buildsData.builds[buildsData.builds.length - 1];
+
+            const jarName = `paper-${latestVersion}-${latestBuild}.jar`;
+            const downloadUrl = `${projectUrl}/versions/${latestVersion}/builds/${latestBuild}/downloads/${jarName}`;
+            
+            this.config.serverJar = jarName; // Update serverJar to the new Paper jar name
+            const serverJarPath = path.join(this.config.minecraftDir, this.config.serverJar);
+            
+            await this.downloadFile(downloadUrl, serverJarPath);
+            this.broadcast({ type: 'notification', message: `Downloaded ${this.config.serverJar} successfully.`, level: 'success' });
+            return serverJarPath;
+        } catch (error) {
+            console.error('Failed to download PaperMC server:', error);
+            this.broadcast({ type: 'error', message: `Failed to download PaperMC server: ${error.message}` });
+            throw error;
+        }
+    }
+
+    async downloadGeyserPlugin() {
+        const pluginsDir = path.join(this.config.minecraftDir, 'plugins');
+        const geyserJarPath = path.join(pluginsDir, 'Geyser-Spigot.jar');
+        if (fs.existsSync(geyserJarPath)) {
+            this.broadcast({ type: 'notification', message: 'Geyser already downloaded.', level: 'info' });
+            return;
+        }
+        try {
+            this.broadcast({ type: 'notification', message: 'Downloading Geyser plugin...', level: 'info' });
+            await this.downloadFile(this.downloadConfig.geyser.downloadUrl, geyserJarPath);
+            this.broadcast({ type: 'notification', message: 'Geyser downloaded successfully.', level: 'success' });
+        } catch (error) {
+            console.error('Failed to download Geyser plugin:', error);
+            this.broadcast({ type: 'error', message: `Failed to download Geyser: ${error.message}` });
+        }
+    }
+
+    async downloadFloodgatePlugin() {
+        const pluginsDir = path.join(this.config.minecraftDir, 'plugins');
+        const floodgateJarPath = path.join(pluginsDir, 'floodgate-spigot.jar');
+        if (fs.existsSync(floodgateJarPath)) {
+            this.broadcast({ type: 'notification', message: 'Floodgate already downloaded.', level: 'info' });
+            return;
+        }
+        try {
+            this.broadcast({ type: 'notification', message: 'Downloading Floodgate plugin...', level: 'info' });
+            await this.downloadFile(this.downloadConfig.floodgate.downloadUrl, floodgateJarPath);
+            this.broadcast({ type: 'notification', message: 'Floodgate downloaded successfully.', level: 'success' });
+        } catch (error) {
+            console.error('Failed to download Floodgate plugin:', error);
+            this.broadcast({ type: 'error', message: `Failed to download Floodgate: ${error.message}` });
         }
     }
 

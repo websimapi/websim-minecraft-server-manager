@@ -109,11 +109,13 @@ export function saveSettings() {
         maxPlayers: parseInt(document.getElementById('maxPlayersInput').value, 10),
         port: parseInt(document.getElementById('portInput').value, 10),
         ram: parseInt(document.getElementById('ramInput').value, 10),
-        autoStart: document.getElementById('autoStartCheck').checked
+        autoStart: document.getElementById('autoStartCheck').checked,
+        enableGeyser: document.getElementById('enableGeyserCheck').checked,
+        enableFloodgate: document.getElementById('enableFloodgateCheck').checked
     };
 
     sendWebSocketMessage({ type: 'settings', settings });
-    ui.showToast('Settings saved', 'success');
+    ui.showToast('Settings saved. A server restart is required for changes to take effect.', 'info');
 }
 
 export function downloadBridge() {

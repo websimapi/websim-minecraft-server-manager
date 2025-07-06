@@ -71,4 +71,3 @@ rcon.password=minecraft
 }
 
 module.exports = MinecraftServer;
-

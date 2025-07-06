@@ -46,6 +46,23 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
+
+    const geyserCheck = document.getElementById('enableGeyserCheck');
+    const floodgateGroup = document.getElementById('floodgateGroup');
+    const floodgateCheck = document.getElementById('enableFloodgateCheck');
+    
+    const toggleFloodgate = () => {
+        if (geyserCheck.checked) {
+            floodgateGroup.style.display = 'flex';
+        } else {
+            floodgateGroup.style.display = 'none';
+            floodgateCheck.checked = false;
+        }
+    };
+
+    geyserCheck.addEventListener('change', toggleFloodgate);
+    // Initial state
+    toggleFloodgate();
 }
 
 export function initialize(api) {
