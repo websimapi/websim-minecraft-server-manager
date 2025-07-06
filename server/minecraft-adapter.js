@@ -5,9 +5,13 @@ const { pipeline } = require('stream');
 const { promisify } = require('util');
 const archiver = require('archiver');
 const fetch = require('node-fetch');
+const pidusage = require('pidusage');
 const { serverConfig, downloadConfig, backupCompressionLevel, geyserServerType, disablePaperPluginRemapper } = require('./config.js');
 const { prepareJavaServer } = require('./downloader.js');
 const { createBackup } = require('./backup-manager.js');
+
+/* @tweakable The interval in milliseconds to update server stats like RAM and TPS. */
+const STATS_UPDATE_INTERVAL_MS = 2500;
 
 class MinecraftAdapter {
     constructor(broadcastCallback) {
@@ -23,6 +27,7 @@ class MinecraftAdapter {
             tps: '20.0'
         };
         this.startTime = null;
+        this.statsUpdateIntervalId = null;
     }
 
     async start() {
@@ -68,6 +73,7 @@ class MinecraftAdapter {
         );
 
         this.setupProcessEventListeners();
+        this.startStatsUpdater();
 
         this.serverStatus = 'online';
         this.startTime = Date.now();
@@ -100,6 +106,7 @@ class MinecraftAdapter {
 
         this.minecraftProcess.on('exit', (code) => {
             console.log(`Server process exited with code ${code}`);
+            this.stopStatsUpdater();
             this.minecraftProcess = null;
             this.serverStatus = 'offline';
             this.startTime = null;
@@ -116,6 +123,7 @@ class MinecraftAdapter {
             return;
         }
         this.sendCommand('stop');
+        this.stopStatsUpdater();
         setTimeout(() => {
             if (this.minecraftProcess) this.minecraftProcess.kill('SIGKILL');
         }, 10000);
@@ -134,8 +142,10 @@ class MinecraftAdapter {
     }
 
     sendCommand(command) {
-        if (!this.minecraftProcess) {
-            this.broadcast({ type: 'notification', message: 'Server is not running', level: 'warning' });
+        if (!this.minecraftProcess || !this.minecraftProcess.stdin.writable) {
+            if (command !== 'stop') { // Suppress warning for shutdown command
+                this.broadcast({ type: 'notification', message: 'Server is not ready to receive commands', level: 'warning' });
+            }
             return;
         }
         this.minecraftProcess.stdin.write(`${command}\n`);
@@ -155,6 +165,14 @@ class MinecraftAdapter {
                 if (playerName) {
                     this.players = this.players.filter(p => p.name !== playerName);
                     this.updatePlayersList();
+                }
+            } else if (line.includes('TPS from last')) {
+                const tpsMatch = line.match(/TPS from last 1m, 5m, 15m:\s*([0-9\.*]+)/);
+                if (tpsMatch && tpsMatch[1]) {
+                    const newTps = parseFloat(tpsMatch[1].replace('*', '')).toFixed(1);
+                    if (this.stats.tps !== newTps) {
+                        this.stats.tps = newTps;
+                    }
                 }
             }
             if (line.includes('Done') && line.includes('For help, type "help"')) {
@@ -260,6 +278,55 @@ class MinecraftAdapter {
                 message: `Failed to auto-configure Geyser: ${error.message}`
             });
         }
+    }
+
+    startStatsUpdater() {
+        if (this.statsUpdateIntervalId) {
+            clearInterval(this.statsUpdateIntervalId);
+        }
+
+        this.statsUpdateIntervalId = setInterval(async () => {
+            if (!this.minecraftProcess || this.serverStatus !== 'online') {
+                return;
+            }
+
+            // Update Uptime
+            if (this.startTime) {
+                this.stats.uptime = this.formatUptime(Date.now() - this.startTime);
+            }
+
+            // Update RAM Usage
+            try {
+                const usage = await pidusage(this.minecraftProcess.pid);
+                this.stats.ram = `${Math.round(usage.memory / 1024 / 1024)} MB`;
+            } catch (err) {
+                // This can fail if the process dies between checks.
+                // console.warn('Could not fetch RAM usage:', err.message);
+                this.stats.ram = 'N/A';
+            }
+
+            // Request TPS for compatible servers
+            if (this.config.serverJar.toLowerCase().includes('paper')) {
+                this.sendCommand('tps');
+            } else {
+                this.stats.tps = 'N/A'; // Vanilla has no easy TPS command
+            }
+
+            // Broadcast the latest stats
+            this.broadcast({ type: 'status', online: true, stats: this.stats });
+
+        }, STATS_UPDATE_INTERVAL_MS);
+    }
+
+    stopStatsUpdater() {
+        if (this.statsUpdateIntervalId) {
+            clearInterval(this.statsUpdateIntervalId);
+            this.statsUpdateIntervalId = null;
+        }
+        // Reset stats on stop
+        this.stats.uptime = '00:00:00';
+        this.stats.ram = '0 MB';
+        this.stats.tps = '20.0';
     }
 }
 
