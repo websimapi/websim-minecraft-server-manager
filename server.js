@@ -80,66 +80,14 @@ class MinecraftServerManager {
         });
 
         this.app.get('/api/download-bridge', (req, res) => {
-            /* @tweakable filename for the downloaded server bridge zip */
-            const zipFilename = 'mc-manager-bridge.zip';
-            const output = fs.createWriteStream(zipFilename);
-            const archive = archiver('zip', {
-                zlib: { level: 9 }
+            // This endpoint is no longer used for the primary download mechanism,
+            // as the zipping is now handled on the client-side to solve the
+            // chicken-and-egg problem of needing the server to download the server.
+            // We'll leave it here but send an informative error.
+            res.status(400).json({ 
+                success: false, 
+                message: 'This endpoint is deprecated. Bridge download is now handled client-side.' 
             });
-
-            output.on('close', () => {
-                res.download(zipFilename, zipFilename, (err) => {
-                    if (err) {
-                        console.error('Error sending file:', err);
-                    }
-                    // Clean up the zip file after download
-                    fs.unlinkSync(zipFilename);
-                });
-            });
-            
-            archive.on('error', (err) => {
-                res.status(500).send({error: err.message});
-            });
-
-            archive.pipe(output);
-
-            const readmeContent = `
-# Minecraft Server Manager - Node.js Bridge
-
-Thank you for downloading the server bridge!
-
-## Instructions:
-
-1.  **Prerequisites:** You need to have Node.js installed. You can download it from [https://nodejs.org/](https://nodejs.org/).
-
-2.  **Unzip:** Extract the contents of this .zip file into a folder.
-
-3.  **Install Dependencies:** Open a terminal or command prompt in that folder and run:
-    \`\`\`
-    npm install
-    \`\`\`
-
-4.  **Add Minecraft Server Jar:** Place your Minecraft server .jar file (e.g., 'server.jar') inside the 'minecraft' directory. Make sure to accept the EULA by creating a 'eula.txt' file in the 'minecraft' directory with the content 'eula=true'.
-
-5.  **Run the Bridge:** Start the server bridge by running:
-    \`\`\`
-    npm start
-    \`\`\`
-
-The manager backend will now be running. You can access the web interface in your browser (usually at http://localhost:3001) to manage your server.
-            `.trim();
-
-            archive.append(readmeContent, { name: 'README.md' });
-            archive.file(path.join(__dirname, 'server.js'), { name: 'server.js' });
-            archive.file(path.join(__dirname, 'package.json'), { name: 'package.json' });
-            archive.file(path.join(__dirname, 'index.html'), { name: 'index.html' });
-            archive.file(path.join(__dirname, 'styles.css'), { name: 'styles.css' });
-            archive.file(path.join(__dirname, 'app.js'), { name: 'app.js' });
-            
-            // Add an empty minecraft directory to guide the user
-            archive.directory(path.join(__dirname, 'minecraft/'), 'minecraft');
-
-            archive.finalize();
         });
     }
 

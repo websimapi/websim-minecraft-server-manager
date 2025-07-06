@@ -432,10 +432,90 @@ class MinecraftServerManager {
     }
 
     downloadBridge() {
+        this.showLoading();
         this.showToast('Preparing download...', 'info');
-        /* @tweakable URL to download the server bridge from */
-        const downloadUrl = '/api/download-bridge';
-        window.location.href = downloadUrl;
+
+        /* @tweakable Filename for the downloaded server bridge zip */
+        const zipFilename = 'mc-manager-bridge.zip';
+        
+        // Use JSZip to create the archive in the browser
+        const zip = new JSZip();
+
+        // Add a helpful README file
+        const readmeContent = `
+# Minecraft Server Manager - Node.js Bridge
+
+Thank you for downloading the server bridge! This Node.js application is the backend that allows the web interface to manage your Minecraft server.
+
+## Instructions:
+
+1.  **Prerequisites:** You need to have Node.js installed on the machine where you'll run your Minecraft server. You can download it from [https://nodejs.org/](https://nodejs.org/).
+
+2.  **Unzip:** Extract the contents of this .zip file into a new folder.
+
+3.  **Install Dependencies:** Open a terminal or command prompt inside the new folder and run the following command to install the required Node.js packages:
+    \`\`\`bash
+    npm install
+    \`\`\`
+
+4.  **Add Minecraft Server Jar:**
+    -   Create a folder named 'minecraft' inside the main folder.
+    -   Place your Minecraft server .jar file (e.g., 'server.jar', 'paper.jar') inside this new 'minecraft' directory.
+    -   If you haven't run this server jar before, you may need to run it once to generate the 'eula.txt' file, then edit it to set 'eula=true'.
+
+5.  **Run the Bridge:** Start the server bridge with this command:
+    \`\`\`bash
+    npm start
+    \`\`\`
+
+The manager backend will now be running on port 3001 by default. You can now use the web interface to connect to it (the default URL is ws://localhost:3001) and manage your server.
+        `.trim();
+
+        zip.file('README.md', readmeContent);
+
+        // Fetch and add other crucial files to the zip
+        const filesToFetch = [
+            'server.js',
+            'package.json',
+        ];
+
+        const fetchPromises = filesToFetch.map(file =>
+            fetch(file)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`Failed to fetch ${file}: ${res.statusText}`);
+                    }
+                    return res.text();
+                })
+                .then(text => {
+                    zip.file(file, text);
+                })
+        );
+
+        Promise.all(fetchPromises)
+            .then(() => {
+                // Create the 'minecraft' directory in the zip
+                zip.folder('minecraft');
+
+                // Generate the zip file
+                return zip.generateAsync({ type: 'blob' });
+            })
+            .then(content => {
+                // Trigger the download
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = zipFilename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                this.hideLoading();
+            })
+            .catch(error => {
+                console.error('Failed to create bridge zip:', error);
+                this.showToast('Failed to create download package.', 'error');
+                this.hideLoading();
+            });
     }
 
     showLoading() {
