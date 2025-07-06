@@ -46,6 +46,12 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
+
+    document.getElementById('acceptEulaBtn').addEventListener('click', () => {
+        apiHandler.acceptEula();
+        hideEulaModal();
+        showLoading();
+    });
 }
 
 export function initialize(api) {
@@ -154,4 +160,12 @@ export function showToast(message, type = 'info') {
     toast.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 5000);
+}
+
+export function showEulaModal() {
+    document.getElementById('eulaModalOverlay').classList.remove('hidden');
+}
+
+export function hideEulaModal() {
+    document.getElementById('eulaModalOverlay').classList.add('hidden');
 }

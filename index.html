@@ -323,6 +323,26 @@
         </main>
     </div>
 
+    <!-- EULA Modal -->
+    <div class="modal-overlay hidden" id="eulaModalOverlay">
+        <div class="modal" id="eulaModal">
+            <div class="modal-header">
+                <h3>Minecraft End User License Agreement (EULA)</h3>
+            </div>
+            <div class="modal-content">
+                <p>To run a Minecraft server, you must agree to the Minecraft EULA. By clicking "Accept", you are indicating your agreement to the terms.</p>
+                <p>You can read the full EULA on the official Minecraft website.</p>
+                <a href="https://www.minecraft.net/en-us/eula" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Read EULA</a>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="acceptEulaBtn">
+                    <i class="fas fa-check"></i>
+                    Accept & Start Server
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">

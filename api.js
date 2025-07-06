@@ -76,6 +76,11 @@ export function opPlayer() {
     playerAction('op');
 }
 
+export function acceptEula() {
+    sendWebSocketMessage({ type: 'accept_eula' });
+    ui.showToast('Accepting EULA...', 'info');
+}
+
 export function uploadFile(file) {
     if (!file) return;
 

@@ -155,12 +155,6 @@ rcon.password=minecraft
             `.trim();
             fs.writeFileSync(serverPropsPath, defaultProps);
         }
-        
-        // Accept EULA
-        const eulaPath = path.join(this.config.minecraftDir, 'eula.txt');
-        if (!fs.existsSync(eulaPath)) {
-            fs.writeFileSync(eulaPath, 'eula=true\n');
-        }
     }
 
     startHttpServer() {
@@ -188,6 +182,9 @@ rcon.password=minecraft
                 break;
             case 'settings':
                 this.updateSettings(data.settings);
+                break;
+            case 'accept_eula':
+                this.acceptEULAAndStart();
                 break;
             case 'ping':
                 this.sendToClient(ws, { type: 'pong' });
@@ -340,6 +337,17 @@ rcon.password=minecraft
             this.serverStatus = 'offline';
             this.startTime = null;
             
+            // Check for EULA issue
+            const eulaPath = path.join(this.config.minecraftDir, 'eula.txt');
+            if (fs.existsSync(eulaPath)) {
+                const eulaContent = fs.readFileSync(eulaPath, 'utf8');
+                if (eulaContent.includes('eula=false')) {
+                    this.broadcastMessage({ type: 'eula_required' });
+                    // Prevent sending standard 'stopped' messages
+                    return;
+                }
+            }
+
             this.broadcastMessage({
                 type: 'status',
                 online: false,
@@ -562,6 +570,43 @@ rcon.password=minecraft
                 client.send(JSON.stringify(message));
             }
         });
+    }
+
+    acceptEULAAndStart() {
+        /** @tweakable Configuration for EULA handling. */
+        const eulaConfig = {
+            fileName: 'eula.txt',
+            restartOnAccept: true,
+        };
+
+        const eulaPath = path.join(this.config.minecraftDir, eulaConfig.fileName);
+        if (fs.existsSync(eulaPath)) {
+            try {
+                let eulaContent = fs.readFileSync(eulaPath, 'utf8');
+                eulaContent = eulaContent.replace('eula=false', 'eula=true');
+                fs.writeFileSync(eulaPath, eulaContent);
+
+                this.broadcastMessage({
+                    type: 'notification',
+                    message: 'EULA accepted.',
+                    level: 'success'
+                });
+                
+                if (eulaConfig.restartOnAccept) {
+                    this.broadcastMessage({
+                        type: 'notification',
+                        message: 'Attempting to start server...',
+                        level: 'info'
+                    });
+                    this.startMinecraftServer();
+                }
+            } catch (error) {
+                console.error(`Failed to accept EULA: ${error}`);
+                this.broadcastMessage({ type: 'error', message: 'Failed to write to eula.txt.' });
+            }
+        } else {
+            this.broadcastMessage({ type: 'error', message: `${eulaConfig.fileName} not found. Cannot accept EULA.` });
+        }
     }
 }
 
