@@ -69,7 +69,7 @@ module.exports.start = async function() {
         }
     }, 5000);
 
-    // Add debug profiling for TPS measurement
+    // Schedule debug profiling to measure TPS via console output parsing
     if (!this.debugInterval) {
         this.debugInterval = setInterval(() => {
             // Start the built-in server profiler
@@ -77,17 +77,7 @@ module.exports.start = async function() {
             // Stop profiling after 20 seconds
             this.debugTimeout = setTimeout(() => {
                 this.sendCommand('debug stop');
-                // Give the server a moment to write the file, then read & broadcast it
-                setTimeout(() => {
-                    const debugFilePath = path.join(this.config.minecraftDir, 'debug-profiling.txt');
-                    fs.readFile(debugFilePath, 'utf8', (err, data) => {
-                        if (err) {
-                            this.broadcast({ type: 'console', message: `Failed to read debug file: ${err.message}` });
-                        } else {
-                            this.broadcast({ type: 'console', message: `Debug profiling data:\n${data}` });
-                        }
-                    });
-                }, 1000);
+                // No file reading needed; TPS is parsed from the console output
             }, 20000);
         }, 40000);
     }

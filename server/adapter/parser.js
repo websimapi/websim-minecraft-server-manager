@@ -24,6 +24,20 @@ module.exports.parseServerOutput = function(output) {
                 this.stats.tps = match[1];
             }
         }
+        // Parse TPS from debug profiling output
+        if (line.includes('Stopped tick profiling after') && line.includes('tick(s) per second')) {
+            const matchDebug = line.match(/\(([\d.]+) tick\(s\) per second\)/);
+            if (matchDebug) {
+                this.stats.tps = matchDebug[1];
+                // Broadcast updated status with accurate TPS
+                this.broadcast({
+                    type: 'status',
+                    online: this.serverStatus === 'online',
+                    stats: this.stats,
+                    startTime: this.startTime
+                });
+            }
+        }
     });
     this.stats.players = this.players.length;
     if (this.startTime) {
