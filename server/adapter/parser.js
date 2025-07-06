@@ -51,6 +51,19 @@ module.exports.formatUptime = function(milliseconds) {
     return `${hours}:${minutes}:${seconds}`;
 };
 
+// New: send debug commands to collect profiling data, then let parseServerOutput trigger file‐based analysis on stop
+module.exports.runTPSProfiling = function() {
+    if (!this.minecraftProcess) {
+        this.broadcast({ type: 'error', message: 'Server is not running. Cannot run TPS analysis.', level: 'error' });
+        return;
+    }
+    this.sendCommand('/debug start');
+    this.broadcast({ type: 'notification', message: 'Started TPS debug profiling for 20 seconds...', level: 'info' });
+    setTimeout(() => {
+        this.sendCommand('/debug stop');
+    }, 20000);
+};
+
 /**
  * Read debug-profiling.txt and estimate TPS from average ms-per-tick.
  */

@@ -55,7 +55,7 @@ function handleClientMessage(serverInstance, ws, data) {
             serverInstance.minecraft.updateSettings(data.settings);
             break;
         case 'analyze-tps':
-            serverInstance.minecraft.analyzeTPS();
+            serverInstance.minecraft.runTPSProfiling();
             break;
         case 'ping':
             // Reply with full status so dashboard stats (players, uptime, ram, tps) update
