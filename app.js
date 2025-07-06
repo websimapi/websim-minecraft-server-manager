@@ -21,7 +21,6 @@ class MinecraftServerManager {
 
     initializeUI() {
         this.bindEventListeners();
-        this.initializeSidebar();
         this.updateServerStatus(false);
     }
 
@@ -30,6 +29,11 @@ class MinecraftServerManager {
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
+                
+                // Set active class on nav item
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+
                 this.switchSection(item.dataset.section);
             });
         });
@@ -102,21 +106,6 @@ class MinecraftServerManager {
         });
     }
 
-    initializeSidebar() {
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                navItems.forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
-                
-                const sectionId = item.dataset.section;
-                document.getElementById('page-title').textContent = 
-                    sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
-            });
-        });
-    }
-
     switchSection(sectionId) {
         // Hide all sections
         document.querySelectorAll('.section').forEach(section => {
@@ -128,7 +117,9 @@ class MinecraftServerManager {
         
         // Update page title
         const pageTitle = document.querySelector('.page-title');
-        pageTitle.textContent = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+        if (pageTitle) {
+            pageTitle.textContent = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+        }
     }
 
     connectWebSocket() {
@@ -493,4 +484,3 @@ window.addEventListener('resize', () => {
         document.body.classList.remove('mobile');
     }
 });
-
