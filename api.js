@@ -1,4 +1,4 @@
-import { connectWebSocket, sendWebSocketMessage } from './websocket.js';
+import { sendWebSocketMessage } from './websocket.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import { zipFilename } from './config.js';
@@ -186,13 +186,4 @@ The manager backend will run on port 3001. Use the web UI to connect.
 
 export function ping() {
     sendWebSocketMessage({ type: 'ping' });
-}
-
-export function connectManually() {
-    if (!state.get().isConnected) {
-        ui.showToast('Attempting to connect to bridge...', 'info');
-        connectWebSocket(); // Use the existing handler
-    } else {
-        ui.showToast('Already connected.', 'info');
-    }
 }

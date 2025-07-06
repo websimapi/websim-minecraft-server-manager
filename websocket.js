@@ -3,7 +3,7 @@ import * as state from './state.js';
 import * as ui from './ui.js';
 
 let socket = null;
-let messageHandler = null;
+let reconnectTimer = null;
 
 export function sendWebSocketMessage(message) {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -13,32 +13,38 @@ export function sendWebSocketMessage(message) {
     }
 }
 
-function attemptReconnect() {
+function attemptReconnect(handler) {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+    }
+    
     if (state.get().reconnectAttempts < maxReconnectAttempts) {
         state.incrementReconnectAttempts();
         console.log(`Attempting to reconnect... (${state.get().reconnectAttempts}/${maxReconnectAttempts})`);
         /* @tweakable Delay before a reconnection attempt is made, in milliseconds */
         const reconnectDelay = reconnectInterval;
-        setTimeout(() => connectWebSocket(messageHandler), reconnectDelay);
+        reconnectTimer = setTimeout(() => connectWebSocket(handler), reconnectDelay);
     } else {
         ui.showToast('Failed to connect to bridge after multiple attempts.', 'error');
         console.error('Max reconnection attempts reached.');
+        ui.updateBridgeStatus('disconnected');
     }
 }
 
 export function connectWebSocket(handler) {
-    // Only update the handler if a valid function is provided
-    if (typeof handler === 'function') {
-        messageHandler = handler;
+    if (typeof handler !== 'function') {
+        console.error('connectWebSocket called without a valid handler.');
+        return;
     }
+
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        console.log("WebSocket connection already open or in progress.");
+        return;
+    }
+
+    ui.updateBridgeStatus('connecting');
     
     try {
-        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-            console.log("WebSocket connection already open or in progress.");
-            return;
-        }
-
-        ui.updateBridgeStatus('connecting');
         socket = new WebSocket(wsUrl);
 
         socket.onopen = () => {
@@ -47,42 +53,39 @@ export function connectWebSocket(handler) {
             state.resetReconnectAttempts();
             ui.showToast('Connected to server bridge', 'success');
             ui.updateBridgeStatus('connected');
+            if (reconnectTimer) clearTimeout(reconnectTimer);
         };
 
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (typeof messageHandler === 'function') {
-                    messageHandler(data);
-                } else {
-                    console.error('WebSocket message handler is not a function.');
-                }
+                handler(data);
             } catch (e) {
-                console.error("Failed to parse WebSocket message:", e);
+                console.error("Failed to parse WebSocket message:", e, event.data);
             }
         };
 
         socket.onclose = () => {
             console.log('WebSocket disconnected');
+            socket = null; // Clear the socket object
             state.setConnected(false);
             ui.updateMinecraftServerStatus(false); // Visually indicate server is offline if bridge disconnects
             ui.updateBridgeStatus('disconnected');
             if (state.get().autoReconnect) {
-                attemptReconnect();
+                attemptReconnect(handler);
             }
         };
 
         socket.onerror = (error) => {
             console.error('WebSocket error:', error);
             ui.showToast('Connection error', 'error');
-            ui.updateBridgeStatus('disconnected');
-            // onclose will be called next, triggering reconnect logic
+            // onclose will be called next, triggering reconnect logic if enabled.
         };
     } catch (error) {
         console.error('Failed to create WebSocket:', error);
         ui.updateBridgeStatus('disconnected');
         if (state.get().autoReconnect) {
-            attemptReconnect();
+            attemptReconnect(handler);
         }
     }
 }

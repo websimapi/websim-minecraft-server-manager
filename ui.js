@@ -1,6 +1,7 @@
 import * as state from './state.js';
 
 let apiHandler = {};
+let connectHandler = () => {};
 
 function switchSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
@@ -10,7 +11,9 @@ function switchSection(sectionId) {
 
     const pageTitle = document.querySelector('.page-title');
     if (pageTitle) {
-        pageTitle.textContent = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+        // Ensure sectionId exists before trying to manipulate it
+        const title = sectionId ? sectionId.charAt(0).toUpperCase() + sectionId.slice(1) : 'Dashboard';
+        pageTitle.textContent = title;
     }
 }
 
@@ -46,7 +49,14 @@ function bindEventListeners() {
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => apiHandler.saveSettings());
     document.getElementById('downloadBridgeBtn').addEventListener('click', () => apiHandler.downloadBridge());
-    document.getElementById('bridgeStatusContainer').addEventListener('click', () => apiHandler.connectManually());
+    document.getElementById('bridgeStatusContainer').addEventListener('click', () => {
+        if (!state.get().isConnected) {
+            ui.showToast('Attempting to connect to bridge...', 'info');
+            connectHandler();
+        } else {
+            ui.showToast('Already connected.', 'info');
+        }
+    });
 
     const geyserCheck = document.getElementById('enableGeyserCheck');
     const floodgateGroup = document.getElementById('floodgateGroup');
@@ -66,9 +76,12 @@ function bindEventListeners() {
     toggleFloodgate();
 }
 
-export function initialize(api) {
+export function initialize(api, connectCallback) {
     apiHandler = api;
+    connectHandler = connectCallback;
     bindEventListeners();
+    // Default to dashboard on load
+    switchSection('dashboard');
 }
 
 export function updateMinecraftServerStatus(online, stats = {}) {

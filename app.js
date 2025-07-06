@@ -36,18 +36,22 @@ function handleWebSocketMessage(data) {
 function startPeriodicUpdates() {
     setInterval(() => {
         if (state.get().isConnected) {
-            api.ping();
+            sendWebSocketMessage({ type: 'ping' });
         }
     }, updateInterval);
 }
 
+function connect() {
+    connectWebSocket(handleWebSocketMessage);
+}
+
 function initialize() {
-    ui.initialize(api);
+    ui.initialize(api, connect);
     state.loadClientSettings(); // Load settings from localStorage
     ui.applyClientSettings(); // Update UI with loaded settings
     ui.updateMinecraftServerStatus(false);
     if (state.get().autoReconnect) {
-        connectWebSocket(handleWebSocketMessage);
+        connect();
     } else {
         ui.updateBridgeStatus('disconnected');
     }
