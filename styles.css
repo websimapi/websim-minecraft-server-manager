@@ -710,10 +710,11 @@ body {
 }
 
 /* Toast Notifications */
+/* @tweakable Position of the toast notifications container */
 .toast-container {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    bottom: 20px;
+    left: 20px;
     z-index: 10000;
 }
 
@@ -760,7 +761,7 @@ body {
 }
 
 @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
+    from { transform: translateX(-100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
 
