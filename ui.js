@@ -2,6 +2,7 @@ import * as state from './state.js';
 
 let apiHandler = {};
 let uptimeIntervalId = null;
+let lastNumericTps = '20.0';  // remember the last known TPS
 
 function switchSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
@@ -110,16 +111,19 @@ export function updateServerStatus(online, stats = {}, startTime = null) {
     ramEl.textContent = stats.ram ?? '0 MB';
     ramEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
 
-    // update TPS (loading, numeric or paused icon) and attach last-updated tooltip
+    // update TPS: keep last known value, append spinner on loading, show paused icon if paused
     const tpsEl = document.getElementById('tps');
     if (stats.tps === 'Paused') {
         tpsEl.innerHTML = '<i class="fas fa-pause"></i> Paused';
         tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
     } else if (stats.tps === 'loading') {
-        tpsEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading';
-        tpsEl.removeAttribute('title');
+        // show spinner to the right of the last numeric TPS
+        tpsEl.innerHTML = `${lastNumericTps} <i class="fas fa-spinner fa-spin"></i>`;
+        // keep the existing title for last update
     } else {
-        tpsEl.textContent = stats.tps ?? '20.0';
+        // numeric update: store and display
+        lastNumericTps = stats.tps ?? lastNumericTps;
+        tpsEl.textContent = lastNumericTps;
         tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
     }
 
