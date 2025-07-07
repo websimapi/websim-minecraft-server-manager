@@ -127,6 +127,9 @@ export function updateServerStatus(online, stats = {}, startTime = null) {
         tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
     }
 
+    // Update server info
+    document.getElementById('serverVersion').textContent = stats.version ?? 'Unknown';
+
     // uptime handling remains unchanged
     const uptimeElement = document.getElementById('uptime');
     if (uptimeIntervalId) {
