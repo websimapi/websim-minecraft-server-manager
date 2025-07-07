@@ -18,40 +18,9 @@ class MinecraftAdapter {
             players: 0,
             uptime:  '00:00:00',
             ram:     '0 MB',
-            tps:     '20.0',
-            version: 'Unknown'
+            tps:     '20.0'
         };
         this.startTime       = null;
-        this.parseAndSetServerVersion();
-    }
-
-    parseAndSetServerVersion() {
-        const jarName = this.config.serverJar;
-        if (!jarName || jarName === 'server.jar') {
-            this.stats.version = 'Unknown';
-            return;
-        }
-
-        let version = 'Unknown';
-        // e.g., vanilla-1.20.4.jar
-        let match = jarName.match(/vanilla-([\d\.]+)\.jar/i);
-        if (match) {
-            version = match[1];
-        }
-
-        // e.g., paper-1.20.4-550.jar
-        if (!match) {
-            match = jarName.match(/paper-([\d\.]+)/i);
-            if (match) version = match[1];
-        }
-
-        // more generic server jar version parsing
-        if (version === 'Unknown') {
-            match = jarName.match(/(\d+\.\d+(\.\d+)?)/);
-            if (match) version = match[1];
-        }
-
-        this.stats.version = version;
     }
 }
 

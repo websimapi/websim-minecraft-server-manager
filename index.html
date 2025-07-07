@@ -248,11 +248,15 @@
                                 </button>
                                 <input type="file" id="fileUpload" style="display: none;">
                             </div>
+                            <div id="serverPropertiesEditor" class="hidden"><!-- dynamic server.properties editor --></div>
                             <div class="file-list" id="fileList">
-                                <div class="file-item">
+                                <div class="file-item server-properties-item">
                                     <i class="fas fa-file"></i>
                                     <span>server.properties</span>
-                                    <button class="btn btn-small">Edit</button>
+                                    <button class="btn btn-small" id="editServerPropertiesBtn">
+                                        <i class="fas fa-edit"></i>
+                                        Edit
+                                    </button>
                                 </div>
                                 <div class="file-item">
                                     <i class="fas fa-folder"></i>

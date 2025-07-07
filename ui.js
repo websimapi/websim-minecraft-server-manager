@@ -65,6 +65,68 @@ function bindEventListeners() {
     geyserCheck.addEventListener('change', toggleFloodgate);
     // Initial state
     toggleFloodgate();
+
+    // Edit server.properties
+    const editBtn = document.getElementById('editServerPropertiesBtn');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            apiHandler.fetchServerProperties()
+                .then(props => showServerPropertiesEditor(props))
+                .catch(() => showToast('Failed to load server properties', 'error'));
+        });
+    }
+}
+
+// Render and handle server.properties editor form
+export function showServerPropertiesEditor(properties) {
+    const editor = document.getElementById('serverPropertiesEditor');
+    const fileList = document.getElementById('fileList');
+    const cardContent = editor.parentElement;
+    const fileOps = cardContent.querySelector('.file-operations');
+    // Hide file manager list & ops
+    fileList.classList.add('hidden');
+    fileOps.classList.add('hidden');
+    editor.classList.remove('hidden');
+    // Build form
+    let html = '<form id="serverPropertiesForm" class="settings-form">';
+    Object.entries(properties).forEach(([key, value]) => {
+        let inputField;
+        if (value === 'true' || value === 'false') {
+            inputField = `<input type="checkbox" id="prop-${key}" ${value === 'true' ? 'checked' : ''}>`;
+        } else if (/^\d+$/.test(value)) {
+            inputField = `<input type="number" id="prop-${key}" value="${value}">`;
+        } else {
+            inputField = `<input type="text" id="prop-${key}" value="${value}">`;
+        }
+        html += `<div class="form-group"><label for="prop-${key}">${key}</label>${inputField}</div>`;
+    });
+    html += '<div class="action-buttons"><button type="button" class="btn btn-primary" id="saveServerPropertiesBtn">Save</button><button type="button" class="btn btn-secondary" id="cancelServerPropertiesBtn">Cancel</button></div>';
+    html += '</form>';
+    editor.innerHTML = html;
+    // Cancel
+    document.getElementById('cancelServerPropertiesBtn').addEventListener('click', () => {
+        editor.classList.add('hidden');
+        fileList.classList.remove('hidden');
+        fileOps.classList.remove('hidden');
+        editor.innerHTML = '';
+    });
+    // Save
+    document.getElementById('saveServerPropertiesBtn').addEventListener('click', () => {
+        const updatedProps = {};
+        Object.keys(properties).forEach(key => {
+            const el = document.getElementById(`prop-${key}`);
+            if (el) {
+                updatedProps[key] = el.type === 'checkbox' ? el.checked.toString() : el.value;
+            }
+        });
+        apiHandler.saveServerProperties(updatedProps).then(() => {
+            // restore view
+            editor.classList.add('hidden');
+            fileList.classList.remove('hidden');
+            fileOps.classList.remove('hidden');
+            editor.innerHTML = '';
+        });
+    });
 }
 
 export function initialize(api) {
@@ -126,9 +188,6 @@ export function updateServerStatus(online, stats = {}, startTime = null) {
         tpsEl.textContent = lastNumericTps;
         tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
     }
-
-    // Update server info
-    document.getElementById('serverVersion').textContent = stats.version ?? 'Unknown';
 
     // uptime handling remains unchanged
     const uptimeElement = document.getElementById('uptime');

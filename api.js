@@ -188,3 +188,36 @@ The manager backend will run on port 3001. Use the web UI to connect.
 export function ping() {
     sendWebSocketMessage({ type: 'ping' });
 }
+
+// Fetch and save server.properties
+export function fetchServerProperties() {
+    return fetch('/api/server-properties')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) throw new Error(data.error || 'Failed to fetch properties');
+            return data.properties;
+        });
+}
+
+export function saveServerProperties(properties) {
+    ui.showLoading();
+    return fetch('/api/server-properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties })
+    })
+    .then(res => res.json())
+    .then(data => {
+        ui.hideLoading();
+        if (data.success) {
+            ui.showToast('Properties saved successfully', 'success');
+        } else {
+            ui.showToast(data.error || 'Failed to save properties', 'error');
+        }
+    })
+    .catch(err => {
+        ui.hideLoading();
+        ui.showToast('Error saving properties', 'error');
+        console.error('Save properties error:', err);
+    });
+}
