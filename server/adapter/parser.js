@@ -26,6 +26,35 @@ module.exports.parseServerOutput = function(output) {
             if (playerName && !this.players.find(p => p.name === playerName)) {
                 this.players.push({ name: playerName, status: 'Online' });
                 this.updatePlayersList();
+                // Resume TPS profiling if it was paused and players are back
+                if (this.players.length > 0 && this.serverStatus === 'online' && !this.debugInterval) {
+                    // Schedule new TPS profiling loop
+                    this.debugInterval = setInterval(() => {
+                        this.sendCommand('debug start');
+                        this.stats.tps = 'loading';
+                        this.broadcast({
+                            type: 'status',
+                            online: this.serverStatus === 'online',
+                            stats: this.stats,
+                            startTime: this.startTime
+                        });
+                        this.debugTimeout = setTimeout(() => {
+                            this.sendCommand('debug stop');
+                        }, 20000);
+                    }, 40000);
+                    // Kick off immediate TPS measurement
+                    this.sendCommand('debug start');
+                    this.stats.tps = 'loading';
+                    this.broadcast({
+                        type: 'status',
+                        online: this.serverStatus === 'online',
+                        stats: this.stats,
+                        startTime: this.startTime
+                    });
+                    this.debugTimeout = setTimeout(() => {
+                        this.sendCommand('debug stop');
+                    }, 20000);
+                }
             }
         } else if (line.includes('left the game')) {
             const playerName = line.match(/(\w+) left the game/)?.[1];

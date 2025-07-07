@@ -74,10 +74,18 @@ module.exports.start = async function() {
         this.debugInterval = setInterval(() => {
             // Start the built-in server profiler
             this.sendCommand('debug start');
+            // Indicate loading state for TPS
+            this.stats.tps = 'loading';
+            this.broadcast({
+                type: 'status',
+                online: this.serverStatus === 'online',
+                stats: this.stats,
+                startTime: this.startTime
+            });
             // Stop profiling after 20 seconds
             this.debugTimeout = setTimeout(() => {
                 this.sendCommand('debug stop');
-                // No file reading needed; TPS is parsed from the console output
+                // TPS will be parsed and broadcast by the parser
             }, 20000);
         }, 40000);
     }

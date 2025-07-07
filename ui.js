@@ -110,14 +110,18 @@ export function updateServerStatus(online, stats = {}, startTime = null) {
     ramEl.textContent = stats.ram ?? '0 MB';
     ramEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
 
-    // update TPS (numeric or paused icon) and attach last-updated tooltip
+    // update TPS (loading, numeric or paused icon) and attach last-updated tooltip
     const tpsEl = document.getElementById('tps');
     if (stats.tps === 'Paused') {
         tpsEl.innerHTML = '<i class="fas fa-pause"></i> Paused';
+        tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
+    } else if (stats.tps === 'loading') {
+        tpsEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading';
+        tpsEl.removeAttribute('title');
     } else {
         tpsEl.textContent = stats.tps ?? '20.0';
+        tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
     }
-    tpsEl.setAttribute('title', `Last updated: ${new Date().toLocaleTimeString()}`);
 
     // uptime handling remains unchanged
     const uptimeElement = document.getElementById('uptime');
